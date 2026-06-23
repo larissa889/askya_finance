@@ -7,17 +7,19 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'agency_id'])]
+#[Fillable(['first_name', 'last_name', 'name', 'email', 'password', 'role', 'agency_id', 'phone', 'id_number', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasFactory, Notifiable, HasApiTokens, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.
@@ -28,9 +30,28 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'role'              => UserRole::class,
+            'password' => 'hashed',
+            'role' => UserRole::class,
         ];
+    }
+
+    /**
+     * Get the user's full name.
+     */
+    protected function getNameAttribute(): string
+    {
+        return $this->first_name . ' ' . $this->last_name;
+    }
+
+    /**
+     * Set the user's name attribute.
+     */
+    protected function setNameAttribute(string $value): void
+    {
+        // Split the name into first_name and last_name
+        $parts = explode(' ', $value, 2);
+        $this->attributes['first_name'] = $parts[0] ?? '';
+        $this->attributes['last_name'] = $parts[1] ?? '';
     }
 
     /**
@@ -49,38 +70,71 @@ class User extends Authenticatable
      */
     public function transactions(): HasMany
     {
-        return $this->hasMany(Transaction::class, 'user_id');
+        return $this->hasMany(Transaction::class, 'created_by');
     }
 
     /**
-     * Validated transactions by this user (supervisor).
+     * Transactions approved by this user (supervisor).
      */
-    public function validatedTransactions(): HasMany
+    public function approvedTransactions(): HasMany
     {
-        return $this->hasMany(Transaction::class, 'validated_by');
+        return $this->hasMany(Transaction::class, 'approved_by');
     }
 
     /**
-     * Cash closes created by this user (cashier).
+     * Cash registers assigned to this user.
      */
-    public function cashCloses(): HasMany
+    public function cashRegisters(): HasMany
     {
-        return $this->hasMany(CashClose::class);
+        return $this->hasMany(CashRegister::class, 'assigned_to');
     }
 
     /**
-     * Validated cash closes by this user (supervisor).
+     * Compensation reports created by this user (accountant).
      */
-    public function validatedCashCloses(): HasMany
+    public function compensationReports(): HasMany
     {
-        return $this->hasMany(CashClose::class, 'validated_by');
+        return $this->hasMany(CompensationReport::class, 'created_by');
+    }
+
+    /**
+     * Compensation reports approved by this user (admin).
+     */
+    public function approvedCompensationReports(): HasMany
+    {
+        return $this->hasMany(CompensationReport::class, 'approved_by');
     }
 
     /**
      * The agency this user belongs to.
      */
-    public function agency()
+    public function agency(): BelongsTo
     {
         return $this->belongsTo(Agency::class);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeCashiers($query)
+    {
+        return $query->where('role', 'cashier');
+    }
+
+    public function scopeSupervisors($query)
+    {
+        return $query->where('role', 'supervisor');
+    }
+
+    public function scopeAccountants($query)
+    {
+        return $query->where('role', 'accountant');
+    }
+
+    public function scopeAdmins($query)
+    {
+        return $query->where('role', 'admin');
     }
 }

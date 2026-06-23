@@ -348,12 +348,6 @@
                 </a>
             </li>
             <li>
-                <a href="{{ route('caissier.transactions.create') }}">
-                    <i class="fas fa-plus-circle"></i>
-                    Nouvelle transaction
-                </a>
-            </li>
-            <li>
                 <a href="{{ route('caissier.transactions.index') }}" class="active">
                     <i class="fas fa-list"></i>
                     Transactions
@@ -400,7 +394,7 @@
             </nav>
             <div class="page-title">
                 <h1><i class="fas fa-receipt me-2"></i>Détails de la transaction</h1>
-                <p>Informations complètes sur {{ $transaction['reference'] }}</p>
+                <p>Informations complètes sur {{ $transaction->reference }}</p>
             </div>
         </div>
 
@@ -408,52 +402,86 @@
         <div class="detail-card">
             <div class="detail-header">
                 <div>
-                    <h2>{{ $transaction['reference'] }}</h2>
-                    <span class="badge badge-{{ $transaction['statut'] }}">
-                        {{ ucfirst(str_replace('_', ' ', $transaction['statut'])) }}
+                    <h2>{{ $transaction->reference }}</h2>
+                    <span class="badge badge-{{ $transaction->status }}">
+                        @if($transaction->status === 'recorded')
+                            Enregistrée
+                        @elseif($transaction->status === 'reconciled')
+                            Rapprochée
+                        @elseif($transaction->status === 'discrepancy')
+                            En écart
+                        @elseif($transaction->status === 'compensated')
+                            Compensée
+                        @else
+                            {{ ucfirst($transaction->status) }}
+                        @endif
                     </span>
                 </div>
                 <div class="amount-display">
-                    {{ number_format($transaction['total'], 0, ',', ' ') }} FCFA
+                    {{ number_format($transaction->total, 0, ',', ' ') }} FCFA
                 </div>
             </div>
 
             <div class="detail-info">
                 <div class="info-row">
                     <div class="info-label">Type de transaction</div>
-                    <div class="info-value">{{ $transaction['type'] }}</div>
+                    <div class="info-value">{{ ucfirst($transaction->type) }}</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Montant</div>
-                    <div class="info-value">{{ number_format($transaction['montant'], 0, ',', ' ') }} FCFA</div>
+                    <div class="info-value">{{ number_format($transaction->amount, 0, ',', ' ') }} FCFA</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Frais</div>
-                    <div class="info-value">{{ number_format($transaction['frais'], 0, ',', ' ') }} FCFA</div>
+                    <div class="info-value">{{ number_format($transaction->fees, 0, ',', ' ') }} FCFA</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Total</div>
                     <div class="info-value" style="color: var(--primary-blue); font-weight: 700;">
-                        {{ number_format($transaction['total'], 0, ',', ' ') }} FCFA
+                        {{ number_format($transaction->total, 0, ',', ' ') }} FCFA
                     </div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Client</div>
-                    <div class="info-value">{{ $transaction['client'] }}</div>
+                    <div class="info-value">{{ $transaction->client_name }}</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Téléphone client</div>
-                    <div class="info-value">{{ $transaction['telephone'] }}</div>
+                    <div class="info-value">{{ $transaction->client_phone ?? '-' }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Service</div>
+                    <div class="info-value">{{ $transaction->service->name }}</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Caissier</div>
-                    <div class="info-value">{{ $transaction['caissier'] }}</div>
+                    <div class="info-value">{{ $transaction->createdBy->name }}</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Date</div>
-                    <div class="info-value">{{ $transaction['date'] }}</div>
+                    <div class="info-value">{{ $transaction->transaction_date ? $transaction->transaction_date->format('d/m/Y H:i') : $transaction->created_at->format('d/m/Y H:i') }}</div>
+                </div>
+                @if($transaction->notes)
+                <div class="info-row">
+                    <div class="info-label">Notes</div>
+                    <div class="info-value">{{ $transaction->notes }}</div>
+                </div>
+                @endif
+            </div>
+
+            @if($transaction->receipt_path)
+            <div style="margin-top: 30px; padding: 20px; background: var(--light-gray); border-radius: 10px;">
+                <h4 style="margin-bottom: 15px;"><i class="fas fa-file-alt me-2"></i>Reçu de transaction</h4>
+                <div class="d-flex gap-2">
+                    <a href="{{ asset($transaction->receipt_path) }}" target="_blank" class="btn btn-primary">
+                        <i class="fas fa-eye me-2"></i>Voir le reçu
+                    </a>
+                    <a href="{{ asset($transaction->receipt_path) }}" download class="btn btn-secondary">
+                        <i class="fas fa-download me-2"></i>Télécharger le reçu
+                    </a>
                 </div>
             </div>
+            @endif
 
             <div style="margin-top: 30px;">
                 <a href="{{ route('caissier.transactions.index') }}" class="btn btn-back">

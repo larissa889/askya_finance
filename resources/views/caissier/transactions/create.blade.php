@@ -419,12 +419,6 @@
                 </a>
             </li>
             <li>
-                <a href="{{ route('caissier.transactions.create') }}" class="active">
-                    <i class="fas fa-plus-circle"></i>
-                    Nouvelle transaction
-                </a>
-            </li>
-            <li>
                 <a href="{{ route('caissier.transactions.index') }}">
                     <i class="fas fa-list"></i>
                     Transactions
@@ -477,7 +471,7 @@
 
         <!-- Form Card -->
         <div class="form-card">
-            <form action="{{ route('caissier.transactions.store') }}" method="POST" id="transactionForm">
+            <form action="{{ route('caissier.transactions.store') }}" method="POST" enctype="multipart/form-data" id="transactionForm">
                 @csrf
 
                 @if(session('success'))
@@ -495,7 +489,7 @@
                     </h3>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="client_name" class="form-label">Nom complet *</label>
+                            <label for="client_name" class="form-label">Nom complet du client *</label>
                             <input type="text" class="form-control @error('client_name') is-invalid @enderror" 
                                    id="client_name" name="client_name" required 
                                    placeholder="Entrez le nom complet du client"
@@ -505,9 +499,9 @@
                             @enderror
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="client_phone" class="form-label">Numéro de téléphone *</label>
+                            <label for="client_phone" class="form-label">Numéro de téléphone</label>
                             <input type="text" class="form-control @error('client_phone') is-invalid @enderror" 
-                                   id="client_phone" name="client_phone" required 
+                                   id="client_phone" name="client_phone" 
                                    placeholder="+225 07 00 00 00 00"
                                    value="{{ old('client_phone') }}">
                             @error('client_phone')
@@ -517,21 +511,12 @@
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="client_id_number" class="form-label">Numéro de la pièce d'identité</label>
+                            <label for="client_id_number" class="form-label">Numéro de pièce d'identité</label>
                             <input type="text" class="form-control @error('client_id_number') is-invalid @enderror" 
                                    id="client_id_number" name="client_id_number" 
                                    placeholder="Entrez le numéro de la pièce"
                                    value="{{ old('client_id_number') }}">
                             @error('client_id_number')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="observations" class="form-label">Observations</label>
-                            <textarea class="form-control @error('observations') is-invalid @enderror" 
-                                      id="observations" name="observations" rows="1"
-                                      placeholder="Observations éventuelles">{{ old('observations') }}</textarea>
-                            @error('observations')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
                         </div>
@@ -546,12 +531,26 @@
                     </h3>
                     <div class="row">
                         <div class="col-md-6 mb-3">
+                            <label for="type" class="form-label">Type de transaction *</label>
+                            <select class="form-select @error('type') is-invalid @enderror" 
+                                    id="type" name="type" required>
+                                <option value="">Sélectionnez le type</option>
+                                <option value="deposit" {{ old('type') == 'deposit' ? 'selected' : '' }}>Dépôt</option>
+                                <option value="withdraw" {{ old('type') == 'withdraw' ? 'selected' : '' }}>Retrait</option>
+                                <option value="transfer" {{ old('type') == 'transfer' ? 'selected' : '' }}>Transfert</option>
+                                <option value="payment" {{ old('type') == 'payment' ? 'selected' : '' }}>Paiement</option>
+                            </select>
+                            @error('type')
+                            <div class="text-danger">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-6 mb-3">
                             <label for="service_id" class="form-label">Service *</label>
                             <select class="form-select @error('service_id') is-invalid @enderror" 
-                                    id="service_id" name="service_id" required>
+                                    id="service_id" name="service_id" required onchange="loadOperationTypes()">
                                 <option value="">Sélectionnez le service</option>
                                 @foreach($services as $service)
-                                <option value="{{ $service->id }}" {{ old('service_id') == $service->id ? 'selected' : '' }}>
+                                <option value="{{ $service->id }}" {{ $selectedService && $selectedService->id == $service->id ? 'selected' : '' }}>
                                     {{ $service->name }}
                                 </option>
                                 @endforeach
@@ -563,8 +562,13 @@
                         <div class="col-md-6 mb-3">
                             <label for="operation_type_id" class="form-label">Type d'opération *</label>
                             <select class="form-select @error('operation_type_id') is-invalid @enderror" 
-                                    id="operation_type_id" name="operation_type_id" required disabled>
+                                    id="operation_type_id" name="operation_type_id" required>
                                 <option value="">Sélectionnez d'abord le service</option>
+                                @foreach($operationTypes as $operationType)
+                                <option value="{{ $operationType->id }}" {{ $selectedOperationType && $selectedOperationType->id == $operationType->id ? 'selected' : '' }}>
+                                    {{ $operationType->name }}
+                                </option>
+                                @endforeach
                             </select>
                             @error('operation_type_id')
                             <div class="text-danger">{{ $message }}</div>
@@ -572,24 +576,31 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label for="currency" class="form-label">Devise *</label>
-                            <select class="form-select @error('currency') is-invalid @enderror" 
-                                    id="currency" name="currency" required>
-                                <option value="">Sélectionnez la devise</option>
-                                <option value="XOF" {{ old('currency') == 'XOF' ? 'selected' : '' }}>FCFA (XOF)</option>
-                                <option value="EUR" {{ old('currency') == 'EUR' ? 'selected' : '' }}>Euro (EUR)</option>
-                                <option value="USD" {{ old('currency') == 'USD' ? 'selected' : '' }}>Dollar US (USD)</option>
-                            </select>
-                            @error('currency')
+                        <div class="col-md-6 mb-3">
+                            <label for="transaction_date" class="form-label">Date de la transaction *</label>
+                            <input type="date" class="form-control @error('transaction_date') is-invalid @enderror" 
+                                   id="transaction_date" name="transaction_date" required
+                                   value="{{ old('transaction_date') ?? \Carbon\Carbon::today()->format('Y-m-d') }}">
+                            @error('transaction_date')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
                         </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="transaction_time" class="form-label">Heure de la transaction *</label>
+                            <input type="time" class="form-control @error('transaction_time') is-invalid @enderror" 
+                                   id="transaction_time" name="transaction_time" required
+                                   value="{{ old('transaction_time') ?? \Carbon\Carbon::now()->format('H:i') }}">
+                            @error('transaction_time')
+                            <div class="text-danger">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="amount" class="form-label">Montant *</label>
+                            <label for="amount" class="form-label">Montant (FCFA) *</label>
                             <input type="number" class="form-control @error('amount') is-invalid @enderror" 
                                    id="amount" name="amount" required min="1000" step="100"
-                                   placeholder="Montant"
+                                   placeholder="Entrez le montant"
                                    value="{{ old('amount') }}"
                                    oninput="calculerTotal()">
                             @error('amount')
@@ -597,23 +608,53 @@
                             @enderror
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="fees" class="form-label">Frais *</label>
+                            <label for="fees" class="form-label">Frais (FCFA) *</label>
                             <input type="number" class="form-control @error('fees') is-invalid @enderror" 
                                    id="fees" name="fees" required min="0" step="100"
-                                   placeholder="Frais"
+                                   placeholder="Entrez les frais"
                                    value="{{ old('fees') ?? 0 }}"
                                    oninput="calculerTotal()">
                             @error('fees')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
                         </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="commission" class="form-label">Commission (FCFA)</label>
+                            <input type="number" class="form-control @error('commission') is-invalid @enderror" 
+                                   id="commission" name="commission" min="0" step="100"
+                                   placeholder="Commission (si applicable)"
+                                   value="{{ old('commission') }}">
+                            @error('commission')
+                            <div class="text-danger">{{ $message }}</div>
+                            @enderror
+                        </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label for="total" class="form-label">Montant total</label>
+                        <div class="col-md-6 mb-3">
+                            <label for="total" class="form-label">Montant total (FCFA)</label>
                             <input type="number" class="form-control" 
                                    id="total" name="total" readonly
                                    placeholder="Calculé automatiquement">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="notes" class="form-label">Observations</label>
+                            <textarea class="form-control @error('notes') is-invalid @enderror" 
+                                      id="notes" name="notes" rows="1"
+                                      placeholder="Observations supplémentaires (optionnel)">{{ old('notes') }}</textarea>
+                            @error('notes')
+                            <div class="text-danger">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="receipt" class="form-label">📎 Joindre le reçu (PDF, JPG, JPEG, PNG - Max 5MB)</label>
+                            <input type="file" class="form-control @error('receipt') is-invalid @enderror" 
+                                   id="receipt" name="receipt" accept=".pdf,.jpg,.jpeg,.png,.webp,image/*">
+                            @error('receipt')
+                            <div class="text-danger">{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted">Le reçu sera stocké de manière sécurisée et associé à cette transaction.</small>
                         </div>
                     </div>
                 </div>
@@ -723,59 +764,51 @@
     <script>
         // Calculer le montant total
         function calculerTotal() {
-            const montant = parseFloat(document.getElementById('amount').value) || 0;
-            const frais = parseFloat(document.getElementById('fees').value) || 0;
-            const total = montant + frais;
+            const amount = parseFloat(document.getElementById('amount').value) || 0;
+            const fees = parseFloat(document.getElementById('fees').value) || 0;
+            const total = amount + fees;
             
             document.getElementById('total').value = total;
-            
-            // Mettre à jour le récapitulatif
-            updateSummary();
         }
 
-        // Charger les types d'opérations pour un service donné
-        document.getElementById('service_id').addEventListener('change', function() {
-            const serviceId = this.value;
+        // Charger les types d'opérations pour un service
+        function loadOperationTypes() {
+            const serviceId = document.getElementById('service_id').value;
             const operationTypeSelect = document.getElementById('operation_type_id');
             
-            if (serviceId) {
-                fetch(`{{ route('caissier.operation-types') }}?service_id=${serviceId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        operationTypeSelect.innerHTML = '<option value="">Sélectionnez le type d\'opération</option>';
-                        operationTypeSelect.disabled = false;
-                        
-                        data.forEach(function(operationType) {
-                            const option = document.createElement('option');
-                            option.value = operationType.id;
-                            option.textContent = operationType.name;
-                            operationTypeSelect.appendChild(option);
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Erreur:', error);
-                        operationTypeSelect.innerHTML = '<option value="">Erreur de chargement</option>';
-                    });
-            } else {
+            if (!serviceId) {
                 operationTypeSelect.innerHTML = '<option value="">Sélectionnez d\'abord le service</option>';
-                operationTypeSelect.disabled = true;
+                return;
             }
-        });
+            
+            // Charger les types d'opérations via AJAX
+            fetch(`/caissier/services/${serviceId}/operation-types`)
+                .then(response => response.json())
+                .then(data => {
+                    operationTypeSelect.innerHTML = '<option value="">Sélectionnez le type d\'opération</option>';
+                    data.forEach(operationType => {
+                        operationTypeSelect.innerHTML += `<option value="${operationType.id}">${operationType.name}</option>`;
+                    });
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des types d\'opérations:', error);
+                });
+        }
 
         // Mettre à jour le récapitulatif en temps réel
         function updateSummary() {
-            const clientNom = document.getElementById('client_name').value;
-            const clientTelephone = document.getElementById('client_phone').value;
-            const serviceSelect = document.getElementById('service_id');
-            const operationTypeSelect = document.getElementById('operation_type_id');
-            const montant = parseFloat(document.getElementById('amount').value) || 0;
-            const frais = parseFloat(document.getElementById('fees').value) || 0;
+            const clientNom = document.getElementById('client_nom').value;
+            const clientTelephone = document.getElementById('client_telephone').value;
+            const typeTransaction = document.getElementById('type_transaction');
+            const serviceTransfert = document.getElementById('service_transfert');
+            const montant = parseFloat(document.getElementById('montant').value) || 0;
+            const frais = parseFloat(document.getElementById('frais').value) || 0;
             const total = montant + frais;
 
             document.getElementById('summary_client').textContent = clientNom || '-';
             document.getElementById('summary_telephone').textContent = clientTelephone || '-';
-            document.getElementById('summary_service').textContent = serviceSelect.options[serviceSelect.selectedIndex].text || '-';
-            document.getElementById('summary_type').textContent = operationTypeSelect.options[operationTypeSelect.selectedIndex].text || '-';
+            document.getElementById('summary_type').textContent = typeTransaction.options[typeTransaction.selectedIndex].text || '-';
+            document.getElementById('summary_service').textContent = serviceTransfert.options[serviceTransfert.selectedIndex].text || '-';
             document.getElementById('summary_montant').textContent = montant > 0 ? number_format(montant) + ' FCFA' : '-';
             document.getElementById('summary_frais').textContent = frais > 0 ? number_format(frais) + ' FCFA' : '-';
             document.getElementById('summary_total').textContent = total > 0 ? number_format(total) + ' FCFA' : '-';
@@ -789,13 +822,24 @@
         // Réinitialiser le formulaire
         function resetForm() {
             document.getElementById('transactionForm').reset();
-            document.getElementById('total').value = '';
+            document.getElementById('montant_total').value = '';
+            
+            // Régénérer un nouveau numéro de transaction
+            const year = new Date().getFullYear();
+            const random = Math.floor(Math.random() * 9999) + 1;
+            document.getElementById('numero_transaction').value = 'TRX-' + year + '-' + random.toString().padStart(4, '0');
+            
+            // Réinitialiser la date
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + 
+                          now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('date_transaction').value = dateStr;
             
             // Réinitialiser le récapitulatif
             document.getElementById('summary_client').textContent = '-';
             document.getElementById('summary_telephone').textContent = '-';
-            document.getElementById('summary_service').textContent = '-';
             document.getElementById('summary_type').textContent = '-';
+            document.getElementById('summary_service').textContent = '-';
             document.getElementById('summary_montant').textContent = '-';
             document.getElementById('summary_frais').textContent = '-';
             document.getElementById('summary_total').textContent = '-';
@@ -803,7 +847,7 @@
 
         // Écouteurs d'événements pour la mise à jour en temps réel
         document.addEventListener('DOMContentLoaded', function() {
-            const inputs = ['client_name', 'client_phone', 'service_id', 'operation_type_id', 'amount', 'fees'];
+            const inputs = ['client_nom', 'client_telephone', 'type_transaction', 'service_transfert', 'montant', 'frais'];
             
             inputs.forEach(function(id) {
                 const element = document.getElementById(id);

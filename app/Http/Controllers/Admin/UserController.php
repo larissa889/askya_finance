@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agency;
 use App\Models\User;
 use App\Modules\Users\Models\UserRole;
 use Illuminate\Http\Request;
@@ -27,8 +28,9 @@ class UserController extends Controller
     public function create()
     {
         $roles = UserRole::cases();
+        $agencies = Agency::active()->get();
         
-        return view('admin.users.create', compact('roles'));
+        return view('admin.users.create', compact('roles', 'agencies'));
     }
 
     /**
@@ -36,19 +38,35 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+        $rules = [
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => ['required', 'string', 'in:admin,caissier,superviseur,comptable'],
-        ]);
+        ];
 
-        User::create([
-            'name' => $request->name,
+        // Règle conditionnelle pour agency_id si le rôle est caissier
+        if ($request->role === 'caissier') {
+            $rules['agency_id'] = ['required', 'exists:agencies,id'];
+        }
+
+        $request->validate($rules);
+
+        $userData = [
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => UserRole::from($request->role),
-        ]);
+        ];
+
+        // Ajouter agency_id si le rôle est caissier
+        if ($request->role === 'caissier') {
+            $userData['agency_id'] = $request->agency_id;
+        }
+
+        User::create($userData);
 
         return redirect()->route('admin.users.index')
             ->with('success', 'Utilisateur créé avec succès.');
@@ -68,8 +86,9 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $roles = UserRole::cases();
+        $agencies = Agency::active()->get();
         
-        return view('admin.users.edit', compact('user', 'roles'));
+        return view('admin.users.edit', compact('user', 'roles', 'agencies'));
     }
 
     /**
@@ -77,16 +96,32 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+        $rules = [
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'role' => ['required', 'string', 'in:admin,caissier,superviseur,comptable'],
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
-        ]);
+        ];
 
-        $user->name = $request->name;
+        // Règle conditionnelle pour agency_id si le rôle est caissier
+        if ($request->role === 'caissier') {
+            $rules['agency_id'] = ['required', 'exists:agencies,id'];
+        }
+
+        $request->validate($rules);
+
+        $user->first_name = $request->first_name;
+        $user->last_name = $request->last_name;
         $user->email = $request->email;
         $user->role = UserRole::from($request->role);
+        
+        // Mettre à jour agency_id si le rôle est caissier
+        if ($request->role === 'caissier') {
+            $user->agency_id = $request->agency_id;
+        } else {
+            $user->agency_id = null;
+        }
         
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);

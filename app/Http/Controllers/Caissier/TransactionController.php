@@ -3,13 +3,11 @@
 namespace App\Http\Controllers\Caissier;
 
 use App\Http\Controllers\Controller;
-use App\Models\Agency;
 use App\Models\OperationType;
 use App\Models\Service;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
@@ -19,11 +17,17 @@ class TransactionController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $transactions = Transaction::where('user_id', $user->id)
-            ->where('is_historical', false)
-            ->orderBy('transaction_date', 'desc')
-            ->orderBy('transaction_time', 'desc')
-            ->get();
+        
+        // Vérifier que l'utilisateur a une agence
+        if (!$user->agency_id) {
+            abort(403, 'Vous n\'êtes pas assigné à une agence.');
+        }
+        
+        // Récupérer les transactions réelles du caissier
+        $transactions = Transaction::where('agency_id', $user->agency_id)
+            ->where('created_by', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
 
         return view('caissier.transactions.index', compact('transactions'));
     }
@@ -31,26 +35,52 @@ class TransactionController extends Controller
     /**
      * Affiche le formulaire de création de transaction
      */
-    public function create()
+    public function create(Request $request)
     {
         $user = Auth::user();
-        $agency = $user->agency;
-        $services = Service::where('is_active', true)->get();
         
-        return view('caissier.transactions.create', compact('agency', 'services'));
-    }
+        // Vérifier que l'utilisateur a une agence
+        if (!$user->agency_id) {
+            abort(403, 'Vous n\'êtes pas assigné à une agence.');
+        }
+        
+        // Récupérer les services de l'agence du caissier
+        $services = $user->agency->activeServices()->get();
+        
+        // Récupérer le service sélectionné si fourni
+        $selectedServiceCode = $request->query('service');
+        $selectedService = null;
+        $operationTypes = collect();
+        
+        if ($selectedServiceCode) {
+            $selectedService = Service::where('code', $selectedServiceCode)->first();
+            if ($selectedService) {
+                // Vérifier que le service est disponible pour l'agence
+                $agencyServices = $user->agency->activeServices()->pluck('services.id')->toArray();
+                if (in_array($selectedService->id, $agencyServices)) {
+                    $operationTypes = OperationType::where('service_id', $selectedService->id)
+                        ->active()
+                        ->get();
+                }
+            }
+        }
+        
+        // Récupérer le type d'opération sélectionné si fourni
+        $selectedOperationTypeCode = $request->query('operation_type');
+        $selectedOperationType = null;
+        
+        if ($selectedOperationTypeCode && $selectedService) {
+            $selectedOperationType = OperationType::where('code', $selectedOperationTypeCode)
+                ->where('service_id', $selectedService->id)
+                ->first();
+        }
 
-    /**
-     * Récupère les types d'opérations pour un service donné
-     */
-    public function getOperationTypes(Request $request)
-    {
-        $serviceId = $request->service_id;
-        $operationTypes = OperationType::where('service_id', $serviceId)
-            ->where('is_active', true)
-            ->get(['id', 'name', 'code']);
-        
-        return response()->json($operationTypes);
+        return view('caissier.transactions.create', compact(
+            'services',
+            'selectedService',
+            'operationTypes',
+            'selectedOperationType'
+        ));
     }
 
     /**
@@ -58,91 +88,67 @@ class TransactionController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
+        
+        // Vérifier que l'utilisateur a une agence
+        if (!$user->agency_id) {
+            abort(403, 'Vous n\'êtes pas assigné à une agence.');
+        }
+        
         $request->validate([
             'service_id' => ['required', 'exists:services,id'],
             'operation_type_id' => ['required', 'exists:operation_types,id'],
             'client_name' => ['required', 'string', 'max:255'],
-            'client_phone' => ['required', 'string', 'max:20'],
+            'client_phone' => ['nullable', 'string', 'max:20'],
             'client_id_number' => ['nullable', 'string', 'max:50'],
+            'type' => ['required', 'in:deposit,withdraw,transfer,payment'],
             'amount' => ['required', 'numeric', 'min:1000'],
             'fees' => ['required', 'numeric', 'min:0'],
-            'currency' => ['required', 'in:XOF,EUR,USD'],
-            'observations' => ['nullable', 'string'],
+            'commission' => ['nullable', 'numeric', 'min:0'],
+            'transaction_date' => ['required', 'date'],
+            'transaction_time' => ['required', 'date_format:H:i'],
+            'notes' => ['nullable', 'string'],
+            'receipt' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
-        $user = Auth::user();
-        $agency = $user->agency;
-        
-        DB::beginTransaction();
-        
-        try {
-            // Créer la transaction
-            $transaction = Transaction::create([
-                'agency_id' => $agency->id,
-                'service_id' => $request->service_id,
-                'operation_type_id' => $request->operation_type_id,
-                'user_id' => $user->id,
-                'transaction_date' => now()->toDateString(),
-                'transaction_time' => now()->toTimeString(),
-                'client_name' => $request->client_name,
-                'client_phone' => $request->client_phone,
-                'client_id_number' => $request->client_id_number,
-                'amount' => $request->amount,
-                'fees' => $request->fees,
-                'total' => $request->amount + $request->fees,
-                'currency' => $request->currency,
-                'observations' => $request->observations,
-                'status' => 'pending',
-                'is_historical' => false,
-            ]);
-
-            // Mettre à jour les soldes de l'agence
-            $this->updateAgencyBalances($agency, $transaction);
-
-            DB::commit();
-
-            return redirect()->route('caissier.transactions.index')
-                ->with('success', 'Transaction ' . $transaction->transaction_number . ' créée avec succès.');
-                
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withInput()->with('error', 'Erreur lors de la création de la transaction: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Met à jour les soldes de l'agence après une transaction
-     */
-    private function updateAgencyBalances(Agency $agency, Transaction $transaction)
-    {
-        $operationType = $transaction->operationType;
-        $operationName = strtolower($operationType->name);
-        
-        // Déterminer l'impact sur les soldes selon le type d'opération
-        $cashImpact = 0;
-        $electronicImpact = 0;
-
-        // Opérations de monnaie électronique (Cash In, Cash Out, Dépôt, Retrait)
-        if (in_array($operationName, ['cash in', 'dépôt'])) {
-            // Le client dépose de l'argent cash, l'agence reçoit du cash
-            $cashImpact = $transaction->total;
-            $electronicImpact = -$transaction->amount;
-        } elseif (in_array($operationName, ['cash out', 'retrait'])) {
-            // Le client retire de l'argent cash, l'agence donne du cash
-            $cashImpact = -$transaction->total;
-            $electronicImpact = $transaction->amount;
-        }
-        // Opérations de transfert d'argent (Envoi, Paiement)
-        elseif (in_array($operationName, ['envoi'])) {
-            // Le client envoie de l'argent, l'agence reçoit du cash
-            $cashImpact = $transaction->total;
-        } elseif (in_array($operationName, ['paiement'])) {
-            // Le client reçoit de l'argent, l'agence donne du cash
-            $cashImpact = -$transaction->amount;
+        // Vérifier que le service est disponible pour l'agence
+        $agencyServices = $user->agency->activeServices()->pluck('id')->toArray();
+        if (!in_array($request->service_id, $agencyServices)) {
+            abort(403, 'Ce service n\'est pas disponible pour votre agence.');
         }
 
-        // Mettre à jour les soldes
-        $agency->updateBalances($cashImpact, $electronicImpact);
+        // Gérer l'upload du reçu
+        $receiptPath = null;
+        if ($request->hasFile('receipt')) {
+            $file = $request->file('receipt');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $file->storeAs('receipts', $fileName, 'public');
+            $receiptPath = 'receipts/' . $fileName;
+        }
+
+        // Combiner date et heure pour créer transaction_date
+        $transactionDateTime = \Carbon\Carbon::parse($request->transaction_date . ' ' . $request->transaction_time);
+
+        // Créer la transaction
+        $transaction = Transaction::create([
+            'agency_id' => $user->agency_id,
+            'service_id' => $request->service_id,
+            'operation_type_id' => $request->operation_type_id,
+            'created_by' => $user->id,
+            'client_name' => $request->client_name,
+            'client_phone' => $request->client_phone,
+            'client_id_number' => $request->client_id_number,
+            'type' => $request->type,
+            'amount' => $request->amount,
+            'fees' => $request->fees,
+            'transaction_date' => $transactionDateTime,
+            'notes' => $request->notes,
+            'receipt_path' => $receiptPath,
+            'status' => 'recorded',
+        ]);
+
+        return redirect()->route('caissier.transactions.index')
+            ->with('success', 'Transaction ' . $transaction->reference . ' créée avec succès.');
     }
 
     /**
@@ -150,12 +156,18 @@ class TransactionController extends Controller
      */
     public function show($id)
     {
-        $transaction = Transaction::findOrFail($id);
+        $user = Auth::user();
         
-        // Vérifier les permissions
-        if (!Auth::user()->can('view', $transaction)) {
-            abort(403);
+        // Vérifier que l'utilisateur a une agence
+        if (!$user->agency_id) {
+            abort(403, 'Vous n\'êtes pas assigné à une agence.');
         }
+        
+        // Récupérer la transaction
+        $transaction = Transaction::where('id', $id)
+            ->where('agency_id', $user->agency_id)
+            ->where('created_by', $user->id)
+            ->firstOrFail();
 
         return view('caissier.transactions.show', compact('transaction'));
     }

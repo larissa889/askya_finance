@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('agencies', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
             $table->string('code')->unique();
+            $table->string('name');
             $table->string('address');
             $table->string('phone');
             $table->string('email')->nullable();
@@ -23,6 +23,7 @@ return new class extends Migration
             $table->decimal('electronic_balance', 15, 2)->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

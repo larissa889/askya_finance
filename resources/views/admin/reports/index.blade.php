@@ -222,15 +222,6 @@
             font-size: 0.95rem;
         }
 
-        /* Filter Card */
-        .filter-card {
-            background: var(--white);
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            border: 1px solid var(--border-color);
-        }
-
         /* Chart Cards */
         .chart-card {
             background: var(--white);
@@ -374,14 +365,14 @@
                     <i class="fas fa-print"></i>
                     Imprimer
                 </button>
-                <a href="{{ route('admin.reports.export-pdf', ['period' => $period, 'start_date' => $startDate, 'end_date' => $endDate, 'agency_id' => $agencyId]) }}" class="btn btn-export">
+                <button class="btn btn-export">
                     <i class="fas fa-file-pdf"></i>
                     Export PDF
-                </a>
-                <a href="{{ route('admin.reports.export-excel', ['period' => $period, 'start_date' => $startDate, 'end_date' => $endDate, 'agency_id' => $agencyId]) }}" class="btn btn-export">
+                </button>
+                <button class="btn btn-export">
                     <i class="fas fa-file-excel"></i>
                     Export Excel
-                </a>
+                </button>
             </div>
         </div>
 
@@ -392,7 +383,7 @@
                     <div class="icon-wrapper">
                         <i class="fas fa-exchange-alt"></i>
                     </div>
-                    <h3>{{ number_format($statistics['total_transactions'], 0, ',', ' ') }}</h3>
+                    <h3>{{ number_format($statistiques['total_transactions'], 0, ',', ' ') }}</h3>
                     <p>Total transactions</p>
                 </div>
             </div>
@@ -401,71 +392,26 @@
                     <div class="icon-wrapper">
                         <i class="fas fa-coins"></i>
                     </div>
-                    <h3>{{ number_format($statistics['total_amount'], 0, ',', ' ') }} FCFA</h3>
+                    <h3>{{ number_format($statistiques['montant_total'], 0, ',', ' ') }} FCFA</h3>
                     <p>Montant total</p>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6 mb-3">
                 <div class="stat-card warning">
                     <div class="icon-wrapper">
-                        <i class="fas fa-check-circle"></i>
+                        <i class="fas fa-user-check"></i>
                     </div>
-                    <h3>{{ $statistics['validated_transactions'] }}</h3>
-                    <p>Transactions validées</p>
+                    <h3>{{ $statistiques['nombre_caissiers'] }}</h3>
+                    <p>Caissiers actifs</p>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6 mb-3">
                 <div class="stat-card info">
                     <div class="icon-wrapper">
-                        <i class="fas fa-clock"></i>
+                        <i class="fas fa-users"></i>
                     </div>
-                    <h3>{{ $statistics['pending_transactions'] }}</h3>
-                    <p>En attente</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filters -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="filter-card">
-                    <form action="{{ route('admin.reports.index') }}" method="GET">
-                        <div class="row">
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label">Période</label>
-                                <select class="form-select" name="period">
-                                    <option value="daily" {{ $period == 'daily' ? 'selected' : '' }}>Journalier</option>
-                                    <option value="weekly" {{ $period == 'weekly' ? 'selected' : '' }}>Hebdomadaire</option>
-                                    <option value="monthly" {{ $period == 'monthly' ? 'selected' : '' }}>Mensuel</option>
-                                    <option value="yearly" {{ $period == 'yearly' ? 'selected' : '' }}>Annuel</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label">Date de début</label>
-                                <input type="date" class="form-control" name="start_date" value="{{ $startDate }}">
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label">Date de fin</label>
-                                <input type="date" class="form-control" name="end_date" value="{{ $endDate }}">
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label">Agence</label>
-                                <select class="form-select" name="agency_id">
-                                    <option value="">Toutes les agences</option>
-                                    @foreach($agencies as $agency)
-                                    <option value="{{ $agency->id }}" {{ $agencyId == $agency->id ? 'selected' : '' }}>{{ $agency->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-filter me-2"></i>Filtrer
-                                </button>
-                            </div>
-                        </div>
-                    </form>
+                    <h3>{{ $statistiques['nombre_superviseurs'] + $statistiques['nombre_comptables'] + $statistiques['nombre_admins'] }}</h3>
+                    <p>Autres utilisateurs</p>
                 </div>
             </div>
         </div>
@@ -474,7 +420,7 @@
         <div class="row mb-4">
             <div class="col-lg-8 mb-3">
                 <div class="chart-card">
-                    <h4><i class="fas fa-chart-line me-2"></i>Transactions par période</h4>
+                    <h4><i class="fas fa-chart-line me-2"></i>Transactions par mois</h4>
                     <canvas id="transactionsChart" height="120"></canvas>
                 </div>
             </div>
@@ -489,25 +435,25 @@
         <div class="row">
             <div class="col-lg-6 mb-3">
                 <div class="chart-card">
-                    <h4><i class="fas fa-chart-bar me-2"></i>Transactions par service</h4>
-                    <canvas id="servicesChart" height="200"></canvas>
+                    <h4><i class="fas fa-chart-bar me-2"></i>Répartition des utilisateurs par rôle</h4>
+                    <canvas id="rolesChart" height="200"></canvas>
                 </div>
             </div>
             <div class="col-lg-6 mb-3">
                 <div class="chart-card">
-                    <h4><i class="fas fa-info-circle me-2"></i>Statistiques financières</h4>
+                    <h4><i class="fas fa-info-circle me-2"></i>Informations supplémentaires</h4>
                     <div style="padding: 20px;">
                         <div style="margin-bottom: 15px;">
-                            <strong style="color: var(--text-dark);">Montant total :</strong>
-                            <span style="color: var(--primary-blue); font-weight: 600; margin-left: 10px;">{{ number_format($statistics['total_amount'], 0, ',', ' ') }} FCFA</span>
+                            <strong style="color: var(--text-dark);">Nombre de superviseurs :</strong>
+                            <span style="color: var(--warning); font-weight: 600; margin-left: 10px;">{{ $statistiques['nombre_superviseurs'] }}</span>
                         </div>
                         <div style="margin-bottom: 15px;">
-                            <strong style="color: var(--text-dark);">Total des frais :</strong>
-                            <span style="color: var(--success); font-weight: 600; margin-left: 10px;">{{ number_format($statistics['total_fees'], 0, ',', ' ') }} FCFA</span>
+                            <strong style="color: var(--text-dark);">Nombre de comptables :</strong>
+                            <span style="color: var(--success); font-weight: 600; margin-left: 10px;">{{ $statistiques['nombre_comptables'] }}</span>
                         </div>
                         <div>
-                            <strong style="color: var(--text-dark);">Revenu total :</strong>
-                            <span style="color: var(--warning); font-weight: 600; margin-left: 10px;">{{ number_format($statistics['total_revenue'], 0, ',', ' ') }} FCFA</span>
+                            <strong style="color: var(--text-dark);">Nombre d'administrateurs :</strong>
+                            <span style="color: var(--danger); font-weight: 600; margin-left: 10px;">{{ $statistiques['nombre_admins'] }}</span>
                         </div>
                     </div>
                 </div>
@@ -520,17 +466,15 @@
 
     <!-- Chart.js Configuration -->
     <script>
-        // Transactions par période
+        // Transactions par mois
         const transactionsCtx = document.getElementById('transactionsChart').getContext('2d');
         new Chart(transactionsCtx, {
             type: 'line',
             data: {
-                labels: @json($transactionsByPeriod->pluck('period')->map(function($item) {
-                    return is_numeric($item) ? $item . 'h' : $item;
-                })),
+                labels: @json(array_keys($transactions_par_mois)),
                 datasets: [{
                     label: 'Transactions',
-                    data: @json($transactionsByPeriod->pluck('count')),
+                    data: @json(array_values($transactions_par_mois)),
                     borderColor: '#2563EB',
                     backgroundColor: 'rgba(37, 99, 235, 0.1)',
                     borderWidth: 3,
@@ -571,11 +515,9 @@
         new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: @json($transactionsByStatus->pluck('status')->map(function($item) {
-                    return ucfirst($item);
-                })),
+                labels: @json(array_keys($transactions_par_statut)),
                 datasets: [{
-                    data: @json($transactionsByStatus->pluck('count')),
+                    data: @json(array_values($transactions_par_statut)),
                     backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
                     borderWidth: 0
                 }]
@@ -596,18 +538,16 @@
             }
         });
 
-        // Transactions par service
-        const servicesCtx = document.getElementById('servicesChart').getContext('2d');
-        new Chart(servicesCtx, {
+        // Utilisateurs par rôle
+        const rolesCtx = document.getElementById('rolesChart').getContext('2d');
+        new Chart(rolesCtx, {
             type: 'bar',
             data: {
-                labels: @json($transactionsByService->map(function($item) {
-                    return $item->service ? $item->service->name : 'Inconnu';
-                })),
+                labels: @json(array_keys($utilisateurs_par_role)),
                 datasets: [{
-                    label: 'Montant',
-                    data: @json($transactionsByService->pluck('amount')),
-                    backgroundColor: '#2563EB',
+                    label: 'Utilisateurs',
+                    data: @json(array_values($utilisateurs_par_role)),
+                    backgroundColor: ['#2563EB', '#f59e0b', '#10b981', '#ef4444'],
                     borderWidth: 0,
                     borderRadius: 8
                 }]

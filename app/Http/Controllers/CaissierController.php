@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Agency;
+use App\Models\Service;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,89 +18,82 @@ class CaissierController extends Controller
         // Utiliser l'utilisateur authentifié
         $user = Auth::user();
         
+        // Vérifier que l'utilisateur a une agence
+        if (!$user->agency_id) {
+            abort(403, 'Vous n\'êtes pas assigné à une agence.');
+        }
+        
+        // Récupérer l'agence du caissier
+        $agency = $user->agency;
+        
+        // Récupérer les services actifs de l'agence du caissier
+        $services = $agency->activeServices()->get();
+        
         $caissier = [
             'nom' => $user->name,
             'email' => $user->email,
-            'photo' => 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&background=0D8ABC&color=fff&size=128'
+            'photo' => 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&background=0D8ABC&color=fff&size=128',
+            'agence' => $agency->name
         ];
 
+        // Calculer les statistiques réelles pour l'agence du caissier
+        $today = now()->startOfDay();
+        
         $statistiques = [
-            'transactions_jour' => 24,
-            'montant_encaisse' => 1250000,
-            'transactions_attente' => 5,
-            'transactions_annulees' => 2
+            'transactions_jour' => Transaction::where('agency_id', $agency->id)
+                ->where('created_by', $user->id)
+                ->whereDate('created_at', '>=', $today)
+                ->count(),
+            'montant_encaisse' => Transaction::where('agency_id', $agency->id)
+                ->where('created_by', $user->id)
+                ->whereDate('created_at', '>=', $today)
+                ->where('status', 'approved')
+                ->sum('amount'),
+            'transactions_attente' => Transaction::where('agency_id', $agency->id)
+                ->where('created_by', $user->id)
+                ->where('status', 'pending')
+                ->count(),
+            'transactions_annulees' => Transaction::where('agency_id', $agency->id)
+                ->where('created_by', $user->id)
+                ->where('status', 'rejected')
+                ->count()
         ];
 
-        $transactions = [
-            [
-                'reference' => 'TRX-2024-001',
-                'client' => 'Marie Kouassi',
-                'montant' => 50000,
-                'type' => 'Envoi',
-                'date' => '21/06/2024 10:30',
-                'statut' => 'validée'
-            ],
-            [
-                'reference' => 'TRX-2024-002',
-                'client' => 'Paul Yao',
-                'montant' => 150000,
-                'type' => 'Réception',
-                'date' => '21/06/2024 11:15',
-                'statut' => 'en_attente'
-            ],
-            [
-                'reference' => 'TRX-2024-003',
-                'client' => 'Awa Diop',
-                'montant' => 75000,
-                'type' => 'Envoi',
-                'date' => '21/06/2024 12:00',
-                'statut' => 'validée'
-            ],
-            [
-                'reference' => 'TRX-2024-004',
-                'client' => 'Kofi Mensah',
-                'montant' => 200000,
-                'type' => 'Réception',
-                'date' => '21/06/2024 14:30',
-                'statut' => 'annulée'
-            ],
-            [
-                'reference' => 'TRX-2024-005',
-                'client' => 'Fatou Sow',
-                'montant' => 100000,
-                'type' => 'Envoi',
-                'date' => '21/06/2024 15:45',
-                'statut' => 'validée'
-            ]
-        ];
+        // Récupérer les transactions réelles du caissier
+        $transactions = Transaction::where('agency_id', $agency->id)
+            ->where('created_by', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($transaction) {
+                return [
+                    'reference' => $transaction->reference,
+                    'client' => $transaction->client_name,
+                    'montant' => $transaction->amount,
+                    'type' => $transaction->type,
+                    'date' => $transaction->created_at->format('d/m/Y H:i'),
+                    'statut' => $transaction->status
+                ];
+            });
 
         $caisse = [
-            'ouverture' => 500000,
-            'encaissements' => 1250000,
-            'decaissements' => 300000,
-            'solde' => 1450000
+            'ouverture' => $agency->cash_balance,
+            'encaissements' => $statistiques['montant_encaisse'],
+            'decaissements' => 0,
+            'solde' => $agency->cash_balance + $statistiques['montant_encaisse']
         ];
 
         $notifications = [
             [
-                'message' => 'Nouvelle transaction de Marie Kouassi',
-                'heure' => 'Il y a 5 min',
+                'message' => 'Bienvenue sur votre espace de travail',
+                'heure' => 'À l\'instant',
                 'type' => 'success'
-            ],
-            [
-                'message' => 'Transaction TRX-2024-004 annulée',
-                'heure' => 'Il y a 15 min',
-                'type' => 'danger'
-            ],
-            [
-                'message' => 'Rappel: Fermeture de caisse à 18h',
-                'heure' => 'Il y a 1 heure',
-                'type' => 'warning'
             ]
         ];
 
         return view('caissier.dashboard', compact(
             'caissier',
+            'services',
             'statistiques',
             'transactions',
             'caisse',

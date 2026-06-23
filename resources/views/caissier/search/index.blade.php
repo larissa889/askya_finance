@@ -351,12 +351,6 @@
                 </a>
             </li>
             <li>
-                <a href="{{ route('caissier.transactions.create') }}">
-                    <i class="fas fa-plus-circle"></i>
-                    Nouvelle transaction
-                </a>
-            </li>
-            <li>
                 <a href="{{ route('caissier.transactions.index') }}">
                     <i class="fas fa-list"></i>
                     Transactions

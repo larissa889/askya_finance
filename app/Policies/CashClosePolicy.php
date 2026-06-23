@@ -13,7 +13,7 @@ class CashClosePolicy
      */
     public function viewAny(User $user): bool
     {
-        return true;
+        return false;
     }
 
     /**
@@ -21,22 +21,6 @@ class CashClosePolicy
      */
     public function view(User $user, CashClose $cashClose): bool
     {
-        if ($user->hasRole('admin')) {
-            return true;
-        }
-
-        if ($user->hasRole('comptable')) {
-            return true;
-        }
-
-        if ($user->hasRole('superviseur')) {
-            return $cashClose->agency_id === $user->agency_id;
-        }
-
-        if ($user->hasRole('caissier')) {
-            return $cashClose->user_id === $user->id;
-        }
-
         return false;
     }
 
@@ -45,7 +29,7 @@ class CashClosePolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole('caissier');
+        return false;
     }
 
     /**
@@ -61,22 +45,6 @@ class CashClosePolicy
      */
     public function delete(User $user, CashClose $cashClose): bool
     {
-        return $user->hasRole('admin');
-    }
-
-    /**
-     * Determine whether the user can validate the model.
-     */
-    public function validate(User $user, CashClose $cashClose): bool
-    {
-        if ($user->hasRole('admin')) {
-            return true;
-        }
-
-        if ($user->hasRole('superviseur')) {
-            return $cashClose->agency_id === $user->agency_id;
-        }
-
         return false;
     }
 
@@ -85,7 +53,7 @@ class CashClosePolicy
      */
     public function restore(User $user, CashClose $cashClose): bool
     {
-        return $user->hasRole('admin');
+        return false;
     }
 
     /**
@@ -93,6 +61,6 @@ class CashClosePolicy
      */
     public function forceDelete(User $user, CashClose $cashClose): bool
     {
-        return $user->hasRole('admin');
+        return false;
     }
 }

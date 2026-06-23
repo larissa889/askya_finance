@@ -295,6 +295,71 @@
             font-size: 1.5rem;
         }
 
+        /* Services Section */
+        .services-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .services-section h4 {
+            font-weight: 600;
+            color: var(--dark-text);
+        }
+
+        .service-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            height: 100%;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            border-color: var(--primary-color);
+        }
+
+        .service-icon {
+            width: 70px;
+            height: 70px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            border: 2px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+        }
+
+        .service-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .service-icon i {
+            font-size: 1.8rem;
+            color: var(--primary-color);
+        }
+
+        .service-card h5 {
+            font-weight: 600;
+            color: var(--dark-text);
+            margin-bottom: 10px;
+        }
+
+        .service-card p {
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+
         /* Notifications */
         .notifications {
             background: white;
@@ -460,15 +525,15 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{{ route('caissier.transactions.create') }}">
-                                <i class="fas fa-plus-circle"></i>
-                                Nouvelle transaction
-                            </a>
-                        </li>
-                        <li>
                             <a href="{{ route('caissier.transactions.index') }}">
                                 <i class="fas fa-list"></i>
                                 Liste des transactions
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('caissier.end-of-day.index') }}">
+                                <i class="fas fa-file-alt"></i>
+                                Fiche d'arrêt
                             </a>
                         </li>
                         <li>
@@ -547,31 +612,47 @@
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
+                <!-- Services Section -->
                 <div class="row mb-4">
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <button class="btn btn-primary action-btn w-100">
-                            <i class="fas fa-plus-circle"></i>
-                            Nouvelle transaction
-                        </button>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <button class="btn btn-info action-btn w-100">
-                            <i class="fas fa-list"></i>
-                            Liste des transactions
-                        </button>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <button class="btn btn-secondary action-btn w-100">
-                            <i class="fas fa-search"></i>
-                            Recherche
-                        </button>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <button class="btn btn-success action-btn w-100">
-                            <i class="fas fa-print"></i>
-                            Imprimer un reçu
-                        </button>
+                    <div class="col-12">
+                        <div class="services-section">
+                            <h4 class="mb-4"><i class="fas fa-th-large me-2"></i>Services disponibles - {{ $caissier['agence'] }}</h4>
+                            <div class="row">
+                                @foreach($services as $service)
+                                <div class="col-lg-4 col-md-6 mb-3">
+                                    <a href="{{ route('caissier.service.show', $service->code) }}" class="text-decoration-none">
+                                        <div class="service-card">
+                                            <div class="service-icon">
+                                                @if($service->code === 'WIZ')
+                                                    <img src="{{ asset('images/logos/wizall money.png') }}" alt="Wizall Money">
+                                                @elseif($service->code === 'COR')
+                                                    <img src="{{ asset('images/logos/coris money.png') }}" alt="Coris Money">
+                                                @elseif($service->code === 'OM')
+                                                    <img src="{{ asset('images/logos/orange money.png') }}" alt="Orange Money">
+                                                @elseif($service->code === 'MM')
+                                                    <img src="{{ asset('images/logos/moov money.png') }}" alt="Moov Money">
+                                                @elseif($service->code === 'TM')
+                                                    <img src="{{ asset('images/logos/telecel money.png') }}" alt="Telecel Money">
+                                                @elseif($service->code === 'WU')
+                                                    <img src="{{ asset('images/logos/western union.png') }}" alt="Western Union">
+                                                @elseif($service->code === 'RIA')
+                                                    <img src="{{ asset('images/logos/RIA.png') }}" alt="RIA">
+                                                @elseif($service->code === 'MGNK')
+                                                    <img src="{{ asset('images/logos/moneyGram.png') }}" alt="MoneyGram NK">
+                                                @elseif($service->code === 'WUNK')
+                                                    <img src="{{ asset('images/logos/western union.png') }}" alt="Western Union NK">
+                                                @else
+                                                    <i class="fas fa-exchange-alt"></i>
+                                                @endif
+                                            </div>
+                                            <h5>{{ $service->name }}</h5>
+                                            <p class="text-muted">{{ $service->description }}</p>
+                                        </div>
+                                    </a>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -21,10 +21,12 @@ class AdminSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'admin@askya.com'],
             [
-                'name' => 'Super Admin',
+                'first_name' => 'Super',
+                'last_name' => 'Admin',
                 'email' => 'admin@askya.com',
                 'password' => Hash::make('admin123'),
                 'role' => UserRole::Admin,
+                'is_active' => true,
             ]
         );
 

@@ -1,14 +1,14 @@
 <?php
 
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\Admin\HistoricalImportController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Caissier\CaisseController;
-use App\Http\Controllers\Caissier\CashCloseController;
+use App\Http\Controllers\Caissier\EndOfDayController;
 use App\Http\Controllers\Caissier\SearchController;
+use App\Http\Controllers\Caissier\ServiceController;
 use App\Http\Controllers\Caissier\TransactionController as CaissierTransactionController;
 use App\Http\Controllers\CaissierController;
 use App\Http\Controllers\ComptableController;
@@ -33,18 +33,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('transactions/create', [CaissierTransactionController::class, 'create'])->name('transactions.create');
         Route::post('transactions', [CaissierTransactionController::class, 'store'])->name('transactions.store');
         Route::get('transactions/{id}', [CaissierTransactionController::class, 'show'])->name('transactions.show');
-        Route::get('operation-types', [CaissierTransactionController::class, 'getOperationTypes'])->name('operation-types');
+        
+        // Routes pour la fiche d'arrêt
+        Route::get('end-of-day', [EndOfDayController::class, 'index'])->name('end-of-day.index');
+        Route::post('end-of-day', [EndOfDayController::class, 'store'])->name('end-of-day.store');
+        
+        // Routes pour les services
+        Route::get('services/{code}', [ServiceController::class, 'show'])->name('service.show');
+        Route::get('services/{serviceId}/operation-types', [ServiceController::class, 'getOperationTypes'])->name('services.operation-types');
         
         // Routes pour la caisse
         Route::get('caisse', [CaisseController::class, 'index'])->name('caisse.index');
         Route::post('caisse/ouvrir', [CaisseController::class, 'ouvrir'])->name('caisse.ouvrir');
         Route::post('caisse/fermer', [CaisseController::class, 'fermer'])->name('caisse.fermer');
-        
-        // Routes pour les clôtures de caisse
-        Route::get('cash-closes', [CashCloseController::class, 'index'])->name('cash-closes.index');
-        Route::get('cash-closes/create', [CashCloseController::class, 'create'])->name('cash-closes.create');
-        Route::post('cash-closes', [CashCloseController::class, 'store'])->name('cash-closes.store');
-        Route::get('cash-closes/{id}', [CashCloseController::class, 'show'])->name('cash-closes.show');
         
         // Routes pour la recherche
         Route::get('search', [SearchController::class, 'index'])->name('search.index');
@@ -111,18 +112,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     
     // Routes pour les rapports
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
-    Route::post('reports/generate', [ReportController::class, 'generate'])->name('reports.generate');
-    Route::get('reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.export-pdf');
-    Route::get('reports/export-excel', [ReportController::class, 'exportExcel'])->name('reports.export-excel');
     
     // Routes pour les paramètres
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
-    
-    // Routes pour l'import historique
-    Route::get('historical-import', [HistoricalImportController::class, 'index'])->name('historical-import.index');
-    Route::get('historical-import/create', [HistoricalImportController::class, 'create'])->name('historical-import.create');
-    Route::post('historical-import', [HistoricalImportController::class, 'store'])->name('historical-import.store');
 });
 
 // Routes de profil (nécessite authentification)

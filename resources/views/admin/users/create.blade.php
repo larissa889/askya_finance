@@ -358,9 +358,15 @@
                 </div>
                 @endif
 
-                <div class="mb-3">
-                    <label for="name" class="form-label">Nom complet</label>
-                    <input type="text" class="form-control" id="name" name="name" value="{{ old('name') }}" required placeholder="Entrez le nom complet">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="first_name" class="form-label">Prénom</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name" value="{{ old('first_name') }}" required placeholder="Entrez le prénom">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="last_name" class="form-label">Nom</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name" value="{{ old('last_name') }}" required placeholder="Entrez le nom">
+                    </div>
                 </div>
 
                 <div class="mb-3">
@@ -370,11 +376,23 @@
 
                 <div class="mb-3">
                     <label for="role" class="form-label">Rôle</label>
-                    <select class="form-select" id="role" name="role" required>
+                    <select class="form-select" id="role" name="role" required onchange="toggleAgencyField()">
                         <option value="">Sélectionner un rôle</option>
                         @foreach($roles as $role)
                         <option value="{{ $role->value }}" {{ old('role') == $role->value ? 'selected' : '' }}>
                             {{ ucfirst($role->value) }}
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="mb-3" id="agency-field" style="display: none;">
+                    <label for="agency_id" class="form-label">Agence <span class="text-danger">*</span></label>
+                    <select class="form-select" id="agency_id" name="agency_id">
+                        <option value="">Sélectionner une agence</option>
+                        @foreach($agencies as $agency)
+                        <option value="{{ $agency->id }}" {{ old('agency_id') == $agency->id ? 'selected' : '' }}>
+                            {{ $agency->name }} ({{ $agency->code }})
                         </option>
                         @endforeach
                     </select>
@@ -405,5 +423,27 @@
 
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        function toggleAgencyField() {
+            const roleSelect = document.getElementById('role');
+            const agencyField = document.getElementById('agency-field');
+            const agencySelect = document.getElementById('agency_id');
+
+            if (roleSelect.value === 'caissier') {
+                agencyField.style.display = 'block';
+                agencySelect.required = true;
+            } else {
+                agencyField.style.display = 'none';
+                agencySelect.required = false;
+                agencySelect.value = '';
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleAgencyField();
+        });
+    </script>
 </body>
 </html>

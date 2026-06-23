@@ -5,63 +5,64 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Transaction extends Model
 {
     use SoftDeletes;
 
     protected $fillable = [
-        'agency_id',
-        'service_id',
-        'operation_type_id',
-        'user_id',
-        'transaction_date',
-        'transaction_time',
-        'transaction_number',
-        'client_name',
-        'client_phone',
-        'client_id_number',
+        'reference',
+        'type',
         'amount',
         'fees',
         'total',
-        'currency',
-        'observations',
+        'transaction_date',
         'status',
-        'validated_by',
-        'validated_at',
-        'rejection_reason',
-        'is_historical',
+        'agency_id',
+        'service_id',
+        'operation_type_id',
+        'created_by',
+        'reconciled_by',
+        'reconciled_at',
+        'reconciliation_notes',
+        'client_name',
+        'client_phone',
+        'client_id_number',
+        'notes',
+        'receipt_path',
     ];
 
     protected $casts = [
-        'transaction_date' => 'date',
-        'transaction_time' => 'datetime:H:i:s',
         'amount' => 'decimal:2',
         'fees' => 'decimal:2',
         'total' => 'decimal:2',
-        'validated_at' => 'datetime',
-        'is_historical' => 'boolean',
+        'transaction_date' => 'datetime',
+        'reconciled_at' => 'datetime',
     ];
 
+    /**
+     * Boot: auto-generate unique reference on creation.
+     */
     protected static function boot(): void
     {
         parent::boot();
 
         static::creating(function (Transaction $transaction) {
-            if (empty($transaction->transaction_number)) {
-                $transaction->transaction_number = static::generateTransactionNumber();
-            }
-            if (empty($transaction->total)) {
-                $transaction->total = $transaction->amount + $transaction->fees;
+            if (empty($transaction->reference)) {
+                $transaction->reference = static::generateReference();
             }
         });
     }
 
-    public static function generateTransactionNumber(): string
+    /**
+     * Generate a unique transaction reference: TXN-YYYYMMDD-XXXX
+     */
+    public static function generateReference(): string
     {
-        $date = now()->format('Ymd');
-        $count = static::whereDate('transaction_date', now()->toDateString())->count() + 1;
-        return 'TRX-' . $date . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+        $date   = now()->format('Ymd');
+        $count  = static::whereDate('created_at', now()->toDateString())->count() + 1;
+        return 'TXN-' . $date . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
     }
 
     public function agency(): BelongsTo
@@ -79,14 +80,14 @@ class Transaction extends Model
         return $this->belongsTo(OperationType::class);
     }
 
-    public function user(): BelongsTo
+    public function createdBy(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function validatedBy(): BelongsTo
+    public function reconciledBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'validated_by');
+        return $this->belongsTo(User::class, 'reconciled_by');
     }
 
     public function scopeForAgency($query, $agencyId)
@@ -94,18 +95,23 @@ class Transaction extends Model
         return $query->where('agency_id', $agencyId);
     }
 
-    public function scopeForDate($query, $date)
+    public function scopeRecorded($query)
     {
-        return $query->whereDate('transaction_date', $date);
+        return $query->where('status', 'recorded');
     }
 
-    public function scopeHistorical($query)
+    public function scopeReconciled($query)
     {
-        return $query->where('is_historical', true);
+        return $query->where('status', 'reconciled');
     }
 
-    public function scopeNotHistorical($query)
+    public function scopeDiscrepancy($query)
     {
-        return $query->where('is_historical', false);
+        return $query->where('status', 'discrepancy');
+    }
+
+    public function scopeCompensated($query)
+    {
+        return $query->where('status', 'compensated');
     }
 }

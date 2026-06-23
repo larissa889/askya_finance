@@ -13,27 +13,30 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('agency_id')->constrained()->onDelete('cascade');
-            $table->foreignId('service_id')->constrained()->onDelete('cascade');
-            $table->foreignId('operation_type_id')->constrained()->onDelete('cascade');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->date('transaction_date');
-            $table->time('transaction_time');
-            $table->string('transaction_number')->unique();
-            $table->string('client_name');
-            $table->string('client_phone');
-            $table->string('client_id_number')->nullable();
+            $table->string('reference')->unique();
+            $table->enum('type', ['deposit', 'withdraw', 'transfer', 'payment']);
             $table->decimal('amount', 15, 2);
             $table->decimal('fees', 15, 2)->default(0);
-            $table->decimal('total', 15, 2);
-            $table->string('currency', 3)->default('XOF');
-            $table->text('observations')->nullable();
-            $table->enum('status', ['pending', 'validated', 'rejected'])->default('pending');
-            $table->foreignId('validated_by')->nullable()->constrained('users')->onDelete('set null');
-            $table->timestamp('validated_at')->nullable();
+            $table->decimal('total', 15, 2)->storedAs('amount + fees');
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('agency_id')->constrained()->onDelete('cascade');
+            $table->foreignId('service_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('operation_type_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
+            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('approved_at')->nullable();
             $table->text('rejection_reason')->nullable();
-            $table->boolean('is_historical')->default(false);
+            $table->string('client_name');
+            $table->string('client_phone')->nullable();
+            $table->string('client_id_number')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
+            $table->softDeletes();
+            
+            $table->index(['agency_id', 'status']);
+            $table->index(['created_by', 'status']);
+            $table->index('reference');
+            $table->index('created_at');
         });
     }
 

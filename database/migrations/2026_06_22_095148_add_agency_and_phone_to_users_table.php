@@ -12,9 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('agency_id')->nullable()->constrained()->onDelete('set null');
-            $table->string('phone')->nullable();
-            $table->string('id_number')->nullable();
+            $table->foreignId('agency_id')->nullable()->constrained()->onDelete('set null')->after('id');
+            $table->string('first_name')->after('name');
+            $table->string('last_name')->after('first_name');
+            $table->string('phone')->nullable()->after('email');
+            $table->string('id_number')->nullable()->after('phone');
+            $table->boolean('is_active')->default(true)->after('role');
+            $table->softDeletes();
+            
+            // Rendre le champ name nullable car il sera calculé automatiquement
+            $table->string('name')->nullable()->change();
         });
     }
 
@@ -25,7 +32,11 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->dropForeign(['agency_id']);
-            $table->dropColumn(['agency_id', 'phone', 'id_number']);
+            $table->dropColumn(['agency_id', 'first_name', 'last_name', 'phone', 'id_number', 'is_active']);
+            $table->dropSoftDeletes();
+            
+            // Remettre le champ name comme non nullable
+            $table->string('name')->nullable(false)->change();
         });
     }
 };

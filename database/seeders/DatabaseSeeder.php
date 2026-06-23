@@ -15,12 +15,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Créer les données de base
         $this->call([
             AgencySeeder::class,
             ServiceSeeder::class,
             OperationTypeSeeder::class,
+            AgencyServiceSeeder::class,
             AdminSeeder::class,
+            CashierSeeder::class,
         ]);
     }
 }

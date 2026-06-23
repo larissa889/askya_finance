@@ -14,11 +14,12 @@ return new class extends Migration
         Schema::create('operation_types', function (Blueprint $table) {
             $table->id();
             $table->foreignId('service_id')->constrained()->onDelete('cascade');
-            $table->string('name');
             $table->string('code')->unique();
-            $table->string('description')->nullable();
+            $table->string('name');
+            $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

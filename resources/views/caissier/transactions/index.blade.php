@@ -176,22 +176,6 @@
             margin-bottom: 0;
         }
 
-        .btn-create {
-            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%);
-            color: var(--white);
-            border: none;
-            padding: 12px 25px;
-            border-radius: 10px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
-        }
-
-        .btn-create:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
-        }
-
         /* Table Card */
         .table-card {
             background: var(--white);
@@ -330,12 +314,6 @@
                 </a>
             </li>
             <li>
-                <a href="{{ route('caissier.transactions.create') }}">
-                    <i class="fas fa-plus-circle"></i>
-                    Nouvelle transaction
-                </a>
-            </li>
-            <li>
                 <a href="{{ route('caissier.transactions.index') }}" class="active">
                     <i class="fas fa-list"></i>
                     Transactions
@@ -377,9 +355,6 @@
                 <h1><i class="fas fa-list me-2"></i>Mes transactions</h1>
                 <p>Consultez et gérez toutes vos transactions</p>
             </div>
-            <a href="{{ route('caissier.transactions.create') }}" class="btn btn-create">
-                <i class="fas fa-plus me-2"></i>Nouvelle transaction
-            </a>
         </div>
 
         <!-- Table Card -->
@@ -390,28 +365,53 @@
                         <tr>
                             <th>Référence</th>
                             <th>Client</th>
+                            <th>Service</th>
                             <th>Type</th>
                             <th>Montant</th>
                             <th>Date</th>
                             <th>Statut</th>
+                            <th>Reçu</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($transactions as $transaction)
                         <tr>
-                            <td><strong>{{ $transaction['reference'] }}</strong></td>
-                            <td>{{ $transaction['client'] }}</td>
-                            <td>{{ $transaction['type'] }}</td>
-                            <td>{{ number_format($transaction['montant'], 0, ',', ' ') }} FCFA</td>
-                            <td>{{ $transaction['date'] }}</td>
+                            <td><strong>{{ $transaction->reference }}</strong></td>
+                            <td>{{ $transaction->client_name }}</td>
+                            <td>{{ $transaction->service->name }}</td>
+                            <td>{{ ucfirst($transaction->type) }}</td>
+                            <td>{{ number_format($transaction->amount, 0, ',', ' ') }} FCFA</td>
+                            <td>{{ $transaction->transaction_date ? $transaction->transaction_date->format('d/m/Y H:i') : $transaction->created_at->format('d/m/Y H:i') }}</td>
                             <td>
-                                <span class="badge badge-{{ $transaction['statut'] }}">
-                                    {{ ucfirst(str_replace('_', ' ', $transaction['statut'])) }}
+                                <span class="badge badge-{{ $transaction->status }}">
+                                    @if($transaction->status === 'recorded')
+                                        Enregistrée
+                                    @elseif($transaction->status === 'reconciled')
+                                        Rapprochée
+                                    @elseif($transaction->status === 'discrepancy')
+                                        En écart
+                                    @elseif($transaction->status === 'compensated')
+                                        Compensée
+                                    @else
+                                        {{ ucfirst($transaction->status) }}
+                                    @endif
                                 </span>
                             </td>
                             <td>
-                                <a href="{{ route('caissier.transactions.show', $transaction['id']) }}" class="btn btn-view">
+                                @if($transaction->receipt_path)
+                                <a href="{{ asset($transaction->receipt_path) }}" target="_blank" class="btn btn-sm btn-primary me-1" title="Voir le reçu">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ asset($transaction->receipt_path) }}" download class="btn btn-sm btn-secondary" title="Télécharger le reçu">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                @else
+                                <span class="text-muted">-</span>
+                                @endif
+                            </td>
+                            <td>
+                                <a href="{{ route('caissier.transactions.show', $transaction->id) }}" class="btn btn-view">
                                     <i class="fas fa-eye"></i> Voir
                                 </a>
                             </td>
