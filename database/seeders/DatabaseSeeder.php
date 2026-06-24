@@ -22,6 +22,8 @@ class DatabaseSeeder extends Seeder
             AgencyServiceSeeder::class,
             AdminSeeder::class,
             CashierSeeder::class,
+            SuperviseurSeeder::class,
+            ComptableSeeder::class,
         ]);
     }
 }

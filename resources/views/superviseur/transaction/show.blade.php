@@ -1,469 +1,113 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Détails Transaction | Askya Finance</title>
-    
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    
-    <style>
-        :root {
-            --primary-dark: #0F172A;
-            --primary-blue: #2563EB;
-            --primary-blue-light: #3b82f6;
-            --white: #ffffff;
-            --light-gray: #f8f9fa;
-            --border-color: #e2e8f0;
-            --text-dark: #1e293b;
-            --text-muted: #64748b;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #06b6d4;
-        }
+@extends('layouts.dashboard')
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--light-gray);
-            color: var(--text-dark);
-            margin: 0;
-            padding: 0;
-        }
+@section('title', 'Détails Transaction')
 
-        /* Header */
-        .header {
-            background: var(--white);
-            border-bottom: 1px solid var(--border-color);
-            padding: 15px 30px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
+@section('content')
+<div class="page-header">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb" style="background: transparent; padding: 0;">
+            <li class="breadcrumb-item"><a href="{{ route('superviseur.dashboard') }}" class="text-primary text-decoration-none">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('superviseur.transactions.index') }}" class="text-primary text-decoration-none">Transactions</a></li>
+            <li class="breadcrumb-item active text-muted" aria-current="page">Détails</li>
+        </ol>
+    </nav>
+    <div class="page-title">
+        <h1>Détails de la transaction</h1>
+        <p>Référence: <strong>{{ $transaction['reference'] }}</strong></p>
+    </div>
+</div>
 
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+<div class="glass-card" style="max-width: 900px;">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center pb-4 mb-4 gap-3" style="border-bottom: 1px solid var(--border-glass);">
+        <div>
+            <h2 class="fw-bold text-white mb-2">{{ $transaction['reference'] }}</h2>
+            @if($transaction['statut'] === 'en_attente')
+                <span class="badge-premium badge-premium-warning">En attente</span>
+            @elseif($transaction['statut'] === 'validée')
+                <span class="badge-premium badge-premium-success">Validée</span>
+            @elseif($transaction['statut'] === 'rejetée')
+                <span class="badge-premium badge-premium-danger">Rejetée</span>
+            @else
+                <span class="badge-premium">{{ ucfirst($transaction['statut']) }}</span>
+            @endif
+        </div>
+        <div class="fs-2 fw-extrabold text-primary">
+            {{ number_format($transaction['total'], 0, ',', ' ') }} FCFA
+        </div>
+    </div>
 
-        .header-brand {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary-dark);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .header-brand i {
-            color: var(--primary-blue);
-        }
-
-        .header-user {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .header-user img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
-        .header-user-info {
-            text-align: right;
-        }
-
-        .header-user-info .name {
-            font-weight: 600;
-            color: var(--text-dark);
-            font-size: 0.9rem;
-        }
-
-        .header-user-info .role {
-            color: var(--text-muted);
-            font-size: 0.8rem;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 70px;
-            left: 0;
-            width: 260px;
-            height: calc(100vh - 70px);
-            background: var(--white);
-            border-right: 1px solid var(--border-color);
-            overflow-y: auto;
-            z-index: 999;
-        }
-
-        .sidebar-menu {
-            list-style: none;
-            padding: 20px 0;
-            margin: 0;
-        }
-
-        .sidebar-menu li {
-            margin-bottom: 5px;
-        }
-
-        .sidebar-menu a {
-            display: flex;
-            align-items: center;
-            padding: 12px 25px;
-            color: var(--text-muted);
-            text-decoration: none;
-            transition: all 0.3s ease;
-            border-left: 3px solid transparent;
-            font-size: 0.95rem;
-        }
-
-        .sidebar-menu a:hover,
-        .sidebar-menu a.active {
-            background-color: rgba(37, 99, 235, 0.05);
-            border-left-color: var(--primary-blue);
-            color: var(--primary-blue);
-        }
-
-        .sidebar-menu a i {
-            width: 25px;
-            margin-right: 12px;
-            font-size: 1.1rem;
-        }
-
-        .sidebar-divider {
-            height: 1px;
-            background: var(--border-color);
-            margin: 15px 25px;
-        }
-
-        /* Main Content */
-        .main-content {
-            margin-left: 260px;
-            margin-top: 70px;
-            padding: 30px;
-            min-height: calc(100vh - 70px);
-        }
-
-        /* Breadcrumb */
-        .breadcrumb {
-            background: transparent;
-            padding: 0;
-            margin-bottom: 20px;
-        }
-
-        .breadcrumb-item a {
-            color: var(--primary-blue);
-            text-decoration: none;
-        }
-
-        .breadcrumb-item.active {
-            color: var(--text-muted);
-        }
-
-        /* Detail Card */
-        .detail-card {
-            background: var(--white);
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            border: 1px solid var(--border-color);
-            max-width: 900px;
-        }
-
-        .detail-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .detail-header h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-            color: var(--text-dark);
-        }
-
-        .detail-header .reference {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-        }
-
-        .detail-section {
-            margin-bottom: 25px;
-        }
-
-        .detail-section h4 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: var(--primary-dark);
-        }
-
-        .detail-row {
-            display: flex;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .detail-row:last-child {
-            border-bottom: none;
-        }
-
-        .detail-label {
-            width: 200px;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .detail-value {
-            flex: 1;
-            color: var(--text-dark);
-            font-weight: 600;
-        }
-
-        .badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-weight: 500;
-            font-size: 0.85rem;
-        }
-
-        .badge-en_attente {
-            background: rgba(245, 158, 11, 0.15);
-            color: var(--warning);
-        }
-
-        .badge-validée {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--success);
-        }
-
-        .badge-rejetée {
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--danger);
-        }
-
-        .btn-back {
-            background: var(--white);
-            color: var(--text-dark);
-            border: 1px solid var(--border-color);
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-back:hover {
-            background: var(--light-gray);
-        }
-
-        /* Responsive */
-        @media (max-width: 991px) {
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-            }
-
-            .sidebar.active {
-                transform: translateX(0);
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                padding: 15px 20px;
-            }
-
-            .header-brand {
-                font-size: 1.2rem;
-            }
-
-            .main-content {
-                padding: 20px;
-            }
-
-            .detail-card {
-                padding: 20px;
-            }
-
-            .detail-row {
-                flex-direction: column;
-            }
-
-            .detail-label {
-                width: 100%;
-                margin-bottom: 5px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Header -->
-    <div class="header">
-        <div class="container-fluid">
-            <div class="header-content">
-                <div class="header-brand">
-                    <i class="fas fa-coins"></i>
-                    <span>Askya Finance</span>
-                </div>
-                <div class="header-user">
-                    <div class="header-user-info">
-                        <div class="name">{{ Auth::user()->name }}</div>
-                        <div class="role">Superviseur</div>
-                    </div>
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=0D8ABC&color=fff&size=128" alt="Avatar">
-                </div>
+    <!-- Client section -->
+    <div class="mb-4">
+        <h5 class="fw-bold text-white mb-3 d-flex align-items-center gap-2">
+            <i class="fas fa-user text-primary small"></i>
+            <span>Informations client</span>
+        </h5>
+        <div class="d-flex flex-column gap-2">
+            <div class="row py-2 g-2" style="border-bottom: 1px solid var(--border-glass);">
+                <div class="col-md-4 text-muted small fw-bold text-uppercase">Nom du client</div>
+                <div class="col-md-8 text-white fw-semibold">{{ $transaction['client'] }}</div>
+            </div>
+            <div class="row py-2 g-2" style="border-bottom: 1px solid var(--border-glass);">
+                <div class="col-md-4 text-muted small fw-bold text-uppercase">Téléphone</div>
+                <div class="col-md-8 text-white">{{ $transaction['telephone'] }}</div>
             </div>
         </div>
     </div>
 
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <ul class="sidebar-menu">
-            <li>
-                <a href="{{ route('superviseur.dashboard') }}">
-                    <i class="fas fa-home"></i>
-                    Dashboard
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('superviseur.transactions.index') }}">
-                    <i class="fas fa-list"></i>
-                    Toutes les transactions
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('superviseur.validation.index') }}">
-                    <i class="fas fa-check-circle"></i>
-                    Validation des transactions
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('superviseur.reports.index') }}">
-                    <i class="fas fa-file-alt"></i>
-                    Rapports
-                </a>
-            </li>
-            <div class="sidebar-divider"></div>
-            <li>
-                <a href="{{ route('superviseur.profile.index') }}">
-                    <i class="fas fa-user"></i>
-                    Mon profil
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('logout') }}">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Déconnexion
-                </a>
-            </li>
-        </ul>
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Breadcrumb -->
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('superviseur.dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('superviseur.transactions.index') }}">Transactions</a></li>
-                <li class="breadcrumb-item active">Détails</li>
-            </ol>
-        </nav>
-
-        <div class="detail-card">
-            <div class="detail-header">
-                <div>
-                    <h3>Détails de la transaction</h3>
-                    <p class="reference">{{ $transaction['reference'] }}</p>
-                </div>
-                <span class="badge badge-{{ $transaction['statut'] }}">
-                    {{ ucfirst(str_replace('_', ' ', $transaction['statut'])) }}
-                </span>
-            </div>
-
-            <div class="detail-section">
-                <h4><i class="fas fa-user me-2"></i>Informations client</h4>
-                <div class="detail-row">
-                    <div class="detail-label">Nom du client</div>
-                    <div class="detail-value">{{ $transaction['client'] }}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Téléphone</div>
-                    <div class="detail-value">{{ $transaction['telephone'] }}</div>
+    <!-- Financial details section -->
+    <div class="mb-4">
+        <h5 class="fw-bold text-white mb-3 d-flex align-items-center gap-2">
+            <i class="fas fa-coins text-primary small"></i>
+            <span>Détails financiers</span>
+        </h5>
+        <div class="d-flex flex-column gap-2">
+            <div class="row py-2 g-2" style="border-bottom: 1px solid var(--border-glass);">
+                <div class="col-md-4 text-muted small fw-bold text-uppercase">Type d'opération</div>
+                <div class="col-md-8 text-white fw-semibold">
+                    @if($transaction['type'] === 'encaissement')
+                        <span class="text-success"><i class="fas fa-arrow-trend-down me-1"></i> {{ ucfirst($transaction['type']) }}</span>
+                    @else
+                        <span class="text-danger"><i class="fas fa-arrow-trend-up me-1"></i> {{ ucfirst($transaction['type']) }}</span>
+                    @endif
                 </div>
             </div>
-
-            <div class="detail-section">
-                <h4><i class="fas fa-exchange-alt me-2"></i>Informations transaction</h4>
-                <div class="detail-row">
-                    <div class="detail-label">Type</div>
-                    <div class="detail-value">{{ $transaction['type'] }}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Montant</div>
-                    <div class="detail-value">{{ number_format($transaction['montant'], 0, ',', ' ') }} FCFA</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Frais</div>
-                    <div class="detail-value">{{ number_format($transaction['frais'], 0, ',', ' ') }} FCFA</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Total</div>
-                    <div class="detail-value" style="color: var(--primary-blue); font-size: 1.2rem;">
-                        {{ number_format($transaction['total'], 0, ',', ' ') }} FCFA
-                    </div>
-                </div>
+            <div class="row py-2 g-2" style="border-bottom: 1px solid var(--border-glass);">
+                <div class="col-md-4 text-muted small fw-bold text-uppercase">Montant net</div>
+                <div class="col-md-8 text-white">{{ number_format($transaction['montant'], 0, ',', ' ') }} FCFA</div>
             </div>
-
-            <div class="detail-section">
-                <h4><i class="fas fa-info-circle me-2"></i>Informations système</h4>
-                <div class="detail-row">
-                    <div class="detail-label">Caissier</div>
-                    <div class="detail-value">{{ $transaction['caissier'] }}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Date</div>
-                    <div class="detail-value">{{ $transaction['date'] }}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Statut</div>
-                    <div class="detail-value">
-                        <span class="badge badge-{{ $transaction['statut'] }}">
-                            {{ ucfirst(str_replace('_', ' ', $transaction['statut'])) }}
-                        </span>
-                    </div>
-                </div>
+            <div class="row py-2 g-2" style="border-bottom: 1px solid var(--border-glass);">
+                <div class="col-md-4 text-muted small fw-bold text-uppercase">Frais</div>
+                <div class="col-md-8 text-white">{{ number_format($transaction['frais'], 0, ',', ' ') }} FCFA</div>
             </div>
-
-            <div class="mt-4">
-                <a href="{{ route('superviseur.transactions.index') }}" class="btn btn-back">
-                    <i class="fas fa-arrow-left me-2"></i>Retour
-                </a>
+            <div class="row py-2 g-2" style="border-bottom: 1px solid var(--border-glass);">
+                <div class="col-md-4 text-muted small fw-bold text-uppercase">Total</div>
+                <div class="col-md-8 text-primary fw-extrabold fs-5">{{ number_format($transaction['total'], 0, ',', ' ') }} FCFA</div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    <!-- System info section -->
+    <div class="mb-4">
+        <h5 class="fw-bold text-white mb-3 d-flex align-items-center gap-2">
+            <i class="fas fa-info-circle text-primary small"></i>
+            <span>Informations système</span>
+        </h5>
+        <div class="d-flex flex-column gap-2">
+            <div class="row py-2 g-2" style="border-bottom: 1px solid var(--border-glass);">
+                <div class="col-md-4 text-muted small fw-bold text-uppercase">Caissier opérationnel</div>
+                <div class="col-md-8 text-white">{{ $transaction['caissier'] }}</div>
+            </div>
+            <div class="row py-2 g-2" style="border-bottom: 1px solid var(--border-glass);">
+                <div class="col-md-4 text-muted small fw-bold text-uppercase">Date</div>
+                <div class="col-md-8 text-white">{{ $transaction['date'] }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-5">
+        <a href="{{ route('superviseur.transactions.index') }}" class="btn-custom">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+</div>
+@endsection

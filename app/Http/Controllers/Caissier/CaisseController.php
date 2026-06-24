@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Caissier;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\CashRegister;
+use App\Models\Transaction;
 
 class CaisseController extends Controller
 {
@@ -15,47 +17,64 @@ class CaisseController extends Controller
     {
         $user = Auth::user();
         
+        // Trouver la caisse ou la créer si elle n'existe pas
+        $cashRegister = CashRegister::where('assigned_to', $user->id)
+            ->where('agency_id', $user->agency_id)
+            ->first();
+            
+        if (!$cashRegister) {
+            $cashRegister = CashRegister::create([
+                'code' => 'REG-' . $user->id . '-' . $user->agency->code,
+                'name' => 'Caisse de ' . $user->name,
+                'agency_id' => $user->agency_id,
+                'assigned_to' => $user->id,
+                'balance' => 0,
+                'status' => 'closed',
+                'is_active' => true,
+            ]);
+        }
+        
+        $today = now()->startOfDay();
+        
+        // Mouvements réels d'aujourd'hui
+        $mouvementsRaw = Transaction::where('agency_id', $user->agency_id)
+            ->where('created_by', $user->id)
+            ->whereDate('created_at', '>=', $today)
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        // Calculer les encaissements et décaissements
+        $encaissements = 0;
+        $decaissements = 0;
+        
+        $mouvements = $mouvementsRaw->map(function ($mvt) use (&$encaissements, &$decaissements) {
+            $isEncaissement = in_array($mvt->type, ['deposit', 'transfer']);
+            if ($isEncaissement) {
+                $encaissements += $mvt->amount;
+            } else {
+                $decaissements += $mvt->amount;
+            }
+            
+            return [
+                'reference' => $mvt->reference,
+                'type' => $isEncaissement ? 'encaissement' : 'decaissement',
+                'montant' => $mvt->amount,
+                'description' => ($isEncaissement ? 'Dépôt/Envoi ' : 'Retrait/Paiement ') . ($mvt->service ? $mvt->service->name : '') . ' - ' . $mvt->client_name,
+                'date' => $mvt->created_at->format('d/m/Y H:i')
+            ];
+        })->toArray();
+        
         $caisse = [
-            'ouverture' => 500000,
-            'encaissements' => 1250000,
-            'decaissements' => 300000,
-            'solde' => 1450000,
-            'date_ouverture' => '21/06/2024 08:00',
-            'caissier' => $user->name
+            'ouverture' => $cashRegister->status === 'open' ? $cashRegister->balance : 0,
+            'encaissements' => $encaissements,
+            'decaissements' => $decaissements,
+            'solde' => ($cashRegister->status === 'open' ? $cashRegister->balance : 0) + $encaissements - $decaissements,
+            'date_ouverture' => $cashRegister->opened_at ? $cashRegister->opened_at->format('d/m/Y H:i') : null,
+            'caissier' => $user->name,
+            'statut' => $cashRegister->status
         ];
 
-        $mouvements = [
-            [
-                'reference' => 'MVT-001',
-                'type' => 'encaissement',
-                'montant' => 50000,
-                'description' => 'Envoi MoneyGram - Marie Kouassi',
-                'date' => '21/06/2024 10:30'
-            ],
-            [
-                'reference' => 'MVT-002',
-                'type' => 'encaissement',
-                'montant' => 150000,
-                'description' => 'Réception Western Union - Paul Yao',
-                'date' => '21/06/2024 11:15'
-            ],
-            [
-                'reference' => 'MVT-003',
-                'type' => 'decaissement',
-                'montant' => 300000,
-                'description' => 'Retrait pour client',
-                'date' => '21/06/2024 14:00'
-            ],
-            [
-                'reference' => 'MVT-004',
-                'type' => 'encaissement',
-                'montant' => 75000,
-                'description' => 'Envoi Ria - Awa Diop',
-                'date' => '21/06/2024 15:00'
-            ]
-        ];
-
-        return view('caissier.caisse.index', compact('caisse', 'mouvements'));
+        return view('caissier.caisse.index', compact('caisse', 'mouvements', 'cashRegister'));
     }
 
     /**
@@ -67,8 +86,31 @@ class CaisseController extends Controller
             'montant_ouverture' => ['required', 'numeric', 'min:0'],
         ]);
 
-        // Simulation de l'ouverture de caisse
-        // En production, cette donnée serait stockée en base de données
+        $user = Auth::user();
+        
+        $cashRegister = CashRegister::where('assigned_to', $user->id)
+            ->where('agency_id', $user->agency_id)
+            ->first();
+            
+        if (!$cashRegister) {
+            $cashRegister = CashRegister::create([
+                'code' => 'REG-' . $user->id . '-' . $user->agency->code,
+                'name' => 'Caisse de ' . $user->name,
+                'agency_id' => $user->agency_id,
+                'assigned_to' => $user->id,
+                'balance' => $request->montant_ouverture,
+                'status' => 'open',
+                'opened_at' => now(),
+                'is_active' => true,
+            ]);
+        } else {
+            $cashRegister->update([
+                'status' => 'open',
+                'balance' => $request->montant_ouverture,
+                'opened_at' => now(),
+                'closed_at' => null,
+            ]);
+        }
 
         return redirect()->route('caissier.caisse.index')
             ->with('success', 'Caisse ouverte avec succès.');
@@ -79,8 +121,18 @@ class CaisseController extends Controller
      */
     public function fermer(Request $request)
     {
-        // Simulation de la fermeture de caisse
-        // En production, cette donnée serait stockée en base de données
+        $user = Auth::user();
+        
+        $cashRegister = CashRegister::where('assigned_to', $user->id)
+            ->where('agency_id', $user->agency_id)
+            ->first();
+            
+        if ($cashRegister) {
+            $cashRegister->update([
+                'status' => 'closed',
+                'closed_at' => now(),
+            ]);
+        }
 
         return redirect()->route('caissier.caisse.index')
             ->with('success', 'Caisse fermée avec succès.');

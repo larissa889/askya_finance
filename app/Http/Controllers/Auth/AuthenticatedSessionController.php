@@ -31,16 +31,7 @@ class AuthenticatedSessionController extends Controller
         // Nettoyer toute URL intended précédente pour éviter les redirections incorrectes
         $request->session()->forget('url.intended');
 
-        // Redirection selon le rôle de l'utilisateur
-        $user = Auth::user();
-        
-        return redirect(match($user->role->value) {
-            'caissier' => route('caissier.dashboard'),
-            'admin' => route('admin.dashboard'),
-            'superviseur' => route('superviseur.dashboard'),
-            'comptable' => route('comptable.dashboard'),
-            default => route('caissier.dashboard'),
-        });
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
     /**

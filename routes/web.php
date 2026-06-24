@@ -23,6 +23,21 @@ Route::get('/', function () {
 
 // Routes pour les tableaux de bord selon le rôle (nécessite authentification + vérification du rôle)
 Route::middleware(['auth'])->group(function () {
+    Route::get('/dashboard', function () {
+        $user = Auth::user();
+        $role = $user->role instanceof \App\Modules\Users\Models\UserRole 
+            ? $user->role->value 
+            : $user->role;
+            
+        return match ($role) {
+            'admin' => redirect()->route('admin.dashboard'),
+            'caissier' => redirect()->route('caissier.dashboard'),
+            'superviseur' => redirect()->route('superviseur.dashboard'),
+            'comptable' => redirect()->route('comptable.dashboard'),
+            default => abort(403, 'Rôle non reconnu.'),
+        };
+    })->name('dashboard');
+
     Route::get('/caissier/dashboard', [CaissierController::class, 'dashboard'])
         ->name('caissier.dashboard')
         ->middleware('role:caissier');

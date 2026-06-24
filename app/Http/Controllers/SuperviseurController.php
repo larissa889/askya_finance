@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -12,67 +13,31 @@ class SuperviseurController extends Controller
      */
     public function dashboard()
     {
-        $user = Auth::user();
+        $today = now()->startOfDay();
         
         $statistiques = [
-            'total_jour' => 45,
-            'en_attente' => 12,
-            'validées' => 28,
-            'rejetées' => 5
+            'total_jour' => Transaction::whereDate('created_at', '>=', $today)->count(),
+            'en_attente' => Transaction::where('status', 'recorded')->count(),
+            'validées' => Transaction::where('status', 'reconciled')->count(),
+            'rejetées' => Transaction::where('status', 'discrepancy')->count()
         ];
 
-        $transactions_en_attente = [
-            [
-                'id' => 1,
-                'reference' => 'TRX-2024-001',
-                'client' => 'Marie Kouassi',
-                'type' => 'Envoi',
-                'montant' => 50000,
-                'caissier' => 'Larissa Tiendrebeogo',
-                'date' => '21/06/2024 10:30',
-                'statut' => 'en_attente'
-            ],
-            [
-                'id' => 2,
-                'reference' => 'TRX-2024-002',
-                'client' => 'Paul Yao',
-                'type' => 'Réception',
-                'montant' => 150000,
-                'caissier' => 'Larissa Tiendrebeogo',
-                'date' => '21/06/2024 11:15',
-                'statut' => 'en_attente'
-            ],
-            [
-                'id' => 3,
-                'reference' => 'TRX-2024-003',
-                'client' => 'Awa Diop',
-                'type' => 'Envoi',
-                'montant' => 75000,
-                'caissier' => 'Jean Dupont',
-                'date' => '21/06/2024 12:00',
-                'statut' => 'en_attente'
-            ],
-            [
-                'id' => 4,
-                'reference' => 'TRX-2024-004',
-                'client' => 'Kofi Mensah',
-                'type' => 'Réception',
-                'montant' => 200000,
-                'caissier' => 'Larissa Tiendrebeogo',
-                'date' => '21/06/2024 14:30',
-                'statut' => 'en_attente'
-            ],
-            [
-                'id' => 5,
-                'reference' => 'TRX-2024-005',
-                'client' => 'Fatou Sow',
-                'type' => 'Envoi',
-                'montant' => 100000,
-                'caissier' => 'Jean Dupont',
-                'date' => '21/06/2024 15:45',
-                'statut' => 'en_attente'
-            ]
-        ];
+        $transactions_en_attente = Transaction::where('status', 'recorded')
+            ->with(['createdBy', 'service'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'reference' => $t->reference,
+                    'client' => $t->client_name,
+                    'type' => $t->type === 'deposit' ? 'Dépôt' : ($t->type === 'withdraw' ? 'Retrait' : ($t->type === 'transfer' ? 'Transfert' : 'Paiement')),
+                    'montant' => $t->amount,
+                    'caissier' => $t->createdBy->name,
+                    'date' => $t->transaction_date ? $t->transaction_date->format('d/m/Y H:i') : $t->created_at->format('d/m/Y H:i'),
+                    'statut' => 'en_attente'
+                ];
+            });
 
         return view('superviseur.dashboard', compact(
             'statistiques',
@@ -85,8 +50,13 @@ class SuperviseurController extends Controller
      */
     public function validerTransaction(Request $request, $id)
     {
-        // Simulation de validation
-        // En production, mettre à jour en base de données
+        $transaction = Transaction::findOrFail($id);
+        
+        $transaction->update([
+            'status' => 'reconciled',
+            'reconciled_by' => Auth::id(),
+            'reconciled_at' => now(),
+        ]);
         
         return redirect()->route('superviseur.dashboard')
             ->with('success', 'Transaction validée avec succès.');
@@ -101,8 +71,14 @@ class SuperviseurController extends Controller
             'commentaire' => ['required', 'string', 'max:500']
         ]);
 
-        // Simulation de rejet
-        // En production, mettre à jour en base de données avec commentaire
+        $transaction = Transaction::findOrFail($id);
+        
+        $transaction->update([
+            'status' => 'discrepancy',
+            'reconciled_by' => Auth::id(),
+            'reconciled_at' => now(),
+            'reconciliation_notes' => $request->commentaire,
+        ]);
         
         return redirect()->route('superviseur.dashboard')
             ->with('success', 'Transaction rejetée avec succès.');
@@ -113,18 +89,27 @@ class SuperviseurController extends Controller
      */
     public function showTransaction($id)
     {
+        $t = Transaction::with(['createdBy', 'service', 'operationType'])->findOrFail($id);
+        
+        $statutView = 'en_attente';
+        if ($t->status === 'reconciled') {
+            $statutView = 'validée';
+        } elseif ($t->status === 'discrepancy') {
+            $statutView = 'rejetée';
+        }
+
         $transaction = [
-            'id' => 1,
-            'reference' => 'TRX-2024-001',
-            'client' => 'Marie Kouassi',
-            'telephone' => '+225 07 00 00 00 00',
-            'type' => 'Envoi',
-            'montant' => 50000,
-            'frais' => 2500,
-            'total' => 52500,
-            'caissier' => 'Larissa Tiendrebeogo',
-            'date' => '21/06/2024 10:30',
-            'statut' => 'en_attente'
+            'id' => $t->id,
+            'reference' => $t->reference,
+            'client' => $t->client_name,
+            'telephone' => $t->client_phone ?? 'N/A',
+            'type' => $t->type === 'deposit' ? 'Dépôt' : ($t->type === 'withdraw' ? 'Retrait' : ($t->type === 'transfer' ? 'Transfert' : 'Paiement')),
+            'montant' => $t->amount,
+            'frais' => $t->fees,
+            'total' => $t->total,
+            'caissier' => $t->createdBy->name,
+            'date' => $t->transaction_date ? $t->transaction_date->format('d/m/Y H:i') : $t->created_at->format('d/m/Y H:i'),
+            'statut' => $statutView
         ];
 
         return view('superviseur.transaction.show', compact('transaction'));
@@ -140,63 +125,57 @@ class SuperviseurController extends Controller
         $date_debut = $request->input('date_debut');
         $date_fin = $request->input('date_fin');
 
-        $transactions = [
-            [
-                'id' => 1,
-                'reference' => 'TRX-2024-001',
-                'client' => 'Marie Kouassi',
-                'type' => 'Envoi',
-                'service' => 'Ria',
-                'montant' => 50000,
-                'caissier' => 'Larissa Tiendrebeogo',
-                'statut' => 'validée',
-                'date' => '21/06/2024 10:30'
-            ],
-            [
-                'id' => 2,
-                'reference' => 'TRX-2024-002',
-                'client' => 'Paul Yao',
-                'type' => 'Réception',
-                'service' => 'MoneyGram',
-                'montant' => 150000,
-                'caissier' => 'Larissa Tiendrebeogo',
-                'statut' => 'en_attente',
-                'date' => '21/06/2024 11:15'
-            ],
-            [
-                'id' => 3,
-                'reference' => 'TRX-2024-003',
-                'client' => 'Awa Diop',
-                'type' => 'Envoi',
-                'service' => 'Western Union',
-                'montant' => 75000,
-                'caissier' => 'Jean Dupont',
-                'statut' => 'validée',
-                'date' => '21/06/2024 12:00'
-            ],
-            [
-                'id' => 4,
-                'reference' => 'TRX-2024-004',
-                'client' => 'Kofi Mensah',
-                'type' => 'Réception',
-                'service' => 'Ria',
-                'montant' => 200000,
-                'caissier' => 'Larissa Tiendrebeogo',
-                'statut' => 'rejetée',
-                'date' => '21/06/2024 14:30'
-            ],
-            [
-                'id' => 5,
-                'reference' => 'TRX-2024-005',
-                'client' => 'Fatou Sow',
-                'type' => 'Envoi',
-                'service' => 'MoneyGram',
-                'montant' => 100000,
-                'caissier' => 'Jean Dupont',
-                'statut' => 'validée',
-                'date' => '21/06/2024 15:45'
-            ]
-        ];
+        $query = Transaction::with(['createdBy', 'service']);
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('reference', 'like', "%{$search}%")
+                  ->orWhere('client_name', 'like', "%{$search}%");
+            });
+        }
+
+        if ($statut) {
+            $dbStatut = match($statut) {
+                'validée' => 'reconciled',
+                'en_attente' => 'recorded',
+                'rejetée' => 'discrepancy',
+                default => null
+            };
+            if ($dbStatut) {
+                $query->where('status', $dbStatut);
+            }
+        }
+
+        if ($date_debut) {
+            $query->whereDate('transaction_date', '>=', $date_debut);
+        }
+
+        if ($date_fin) {
+            $query->whereDate('transaction_date', '<=', $date_fin);
+        }
+
+        $transactionsRaw = $query->orderBy('created_at', 'desc')->get();
+
+        $transactions = $transactionsRaw->map(function ($t) {
+            $statutView = 'en_attente';
+            if ($t->status === 'reconciled') {
+                $statutView = 'validée';
+            } elseif ($t->status === 'discrepancy') {
+                $statutView = 'rejetée';
+            }
+
+            return [
+                'id' => $t->id,
+                'reference' => $t->reference,
+                'client' => $t->client_name,
+                'type' => $t->type === 'deposit' ? 'Dépôt' : ($t->type === 'withdraw' ? 'Retrait' : ($t->type === 'transfer' ? 'Transfert' : 'Paiement')),
+                'service' => $t->service ? $t->service->name : 'N/A',
+                'montant' => $t->amount,
+                'caissier' => $t->createdBy->name,
+                'statut' => $statutView,
+                'date' => $t->transaction_date ? $t->transaction_date->format('d/m/Y H:i') : $t->created_at->format('d/m/Y H:i')
+            ];
+        });
 
         return view('superviseur.transactions.index', compact(
             'transactions',
@@ -212,47 +191,25 @@ class SuperviseurController extends Controller
      */
     public function validation(Request $request)
     {
-        $transactions_en_attente = [
-            [
-                'id' => 1,
-                'reference' => 'TRX-2024-001',
-                'client' => 'Marie Kouassi',
-                'type' => 'Envoi',
-                'service' => 'Ria',
-                'montant' => 50000,
-                'frais' => 2500,
-                'total' => 52500,
-                'caissier' => 'Larissa Tiendrebeogo',
-                'date' => '21/06/2024 10:30',
-                'statut' => 'en_attente'
-            ],
-            [
-                'id' => 2,
-                'reference' => 'TRX-2024-002',
-                'client' => 'Paul Yao',
-                'type' => 'Réception',
-                'service' => 'MoneyGram',
-                'montant' => 150000,
-                'frais' => 7500,
-                'total' => 157500,
-                'caissier' => 'Larissa Tiendrebeogo',
-                'date' => '21/06/2024 11:15',
-                'statut' => 'en_attente'
-            ],
-            [
-                'id' => 3,
-                'reference' => 'TRX-2024-003',
-                'client' => 'Awa Diop',
-                'type' => 'Envoi',
-                'service' => 'Western Union',
-                'montant' => 75000,
-                'frais' => 3750,
-                'total' => 78750,
-                'caissier' => 'Jean Dupont',
-                'date' => '21/06/2024 12:00',
-                'statut' => 'en_attente'
-            ]
-        ];
+        $transactions_en_attente = Transaction::where('status', 'recorded')
+            ->with(['createdBy', 'service'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'reference' => $t->reference,
+                    'client' => $t->client_name,
+                    'type' => $t->type === 'deposit' ? 'Dépôt' : ($t->type === 'withdraw' ? 'Retrait' : ($t->type === 'transfer' ? 'Transfert' : 'Paiement')),
+                    'service' => $t->service ? $t->service->name : 'N/A',
+                    'montant' => $t->amount,
+                    'frais' => $t->fees,
+                    'total' => $t->total,
+                    'caissier' => $t->createdBy->name,
+                    'date' => $t->transaction_date ? $t->transaction_date->format('d/m/Y H:i') : $t->created_at->format('d/m/Y H:i'),
+                    'statut' => 'en_attente'
+                ];
+            });
 
         return view('superviseur.validation.index', compact('transactions_en_attente'));
     }
@@ -262,21 +219,38 @@ class SuperviseurController extends Controller
      */
     public function reports()
     {
+        $today = now()->startOfDay();
+        
         $statistiques = [
-            'total_jour' => 45,
-            'validations' => 28,
-            'rejets' => 5,
-            'montant_total' => 5750000
+            'total_jour' => Transaction::whereDate('created_at', '>=', $today)->count(),
+            'validations' => Transaction::where('status', 'reconciled')->whereDate('reconciled_at', '>=', $today)->count(),
+            'rejets' => Transaction::where('status', 'discrepancy')->whereDate('reconciled_at', '>=', $today)->count(),
+            'montant_total' => Transaction::where('status', 'reconciled')->whereDate('reconciled_at', '>=', $today)->sum('amount')
         ];
 
+        // Regrouper par jour sur les 7 derniers jours
+        $days = collect();
+        $data = collect();
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $days->push($date->translatedFormat('l'));
+            
+            $count = Transaction::whereDate('created_at', $date->toDateString())->count();
+            $data->push($count);
+        }
+
         $transactions_par_jour = [
-            'labels' => ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'],
-            'data' => [12, 19, 15, 25, 22, 18, 10]
+            'labels' => $days->toArray(),
+            'data' => $data->toArray()
         ];
 
         $transactions_par_statut = [
             'labels' => ['Validées', 'En attente', 'Rejetées'],
-            'data' => [28, 12, 5]
+            'data' => [
+                Transaction::where('status', 'reconciled')->count(),
+                Transaction::where('status', 'recorded')->count(),
+                Transaction::where('status', 'discrepancy')->count()
+            ]
         ];
 
         return view('superviseur.reports.index', compact(

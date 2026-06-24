@@ -1,755 +1,224 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tableau de Bord - Caissier | Askya Finance</title>
-    
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    
-    <style>
-        :root {
-            --primary-color: #0D8ABC;
-            --secondary-color: #6c757d;
-            --success-color: #28a745;
-            --warning-color: #ffc107;
-            --danger-color: #dc3545;
-            --light-bg: #f8f9fa;
-            --dark-text: #343a40;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--light-bg);
-            color: var(--dark-text);
-        }
-
-        /* Navbar */
-        .navbar {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #0a6a8f 100%);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-        }
-
-        .navbar-brand i {
-            margin-right: 10px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 2px solid white;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            background-color: white;
-            min-height: calc(100vh - 56px);
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
-            padding: 20px 0;
-        }
-
-        .sidebar-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .sidebar-menu li {
-            margin-bottom: 5px;
-        }
-
-        .sidebar-menu a {
-            display: flex;
-            align-items: center;
-            padding: 12px 25px;
-            color: var(--dark-text);
-            text-decoration: none;
-            transition: all 0.3s ease;
-            border-left: 3px solid transparent;
-        }
-
-        .sidebar-menu a:hover,
-        .sidebar-menu a.active {
-            background-color: rgba(13, 138, 188, 0.1);
-            border-left-color: var(--primary-color);
-            color: var(--primary-color);
-        }
-
-        .sidebar-menu a i {
-            width: 25px;
-            margin-right: 10px;
-            font-size: 1.1rem;
-        }
-
-        /* Welcome Section */
-        .welcome-section {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #0a6a8f 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 15px rgba(13, 138, 188, 0.3);
-        }
-
-        .welcome-section h2 {
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .welcome-section p {
-            margin-bottom: 0;
-            opacity: 0.9;
-        }
-
-        /* Stat Cards */
-        .stat-card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-            border: none;
-            height: 100%;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .stat-card .icon-wrapper {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            margin-bottom: 15px;
-        }
-
-        .stat-card.primary .icon-wrapper {
-            background-color: rgba(13, 138, 188, 0.15);
-            color: var(--primary-color);
-        }
-
-        .stat-card.success .icon-wrapper {
-            background-color: rgba(40, 167, 69, 0.15);
-            color: var(--success-color);
-        }
-
-        .stat-card.warning .icon-wrapper {
-            background-color: rgba(255, 193, 7, 0.15);
-            color: var(--warning-color);
-        }
-
-        .stat-card.danger .icon-wrapper {
-            background-color: rgba(220, 53, 69, 0.15);
-            color: var(--danger-color);
-        }
-
-        .stat-card h3 {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .stat-card p {
-            color: var(--secondary-color);
-            margin-bottom: 0;
-            font-weight: 500;
-        }
-
-        /* Action Buttons */
-        .action-btn {
-            padding: 20px 30px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            height: 100%;
-        }
-
-        .action-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-        }
-
-        .action-btn i {
-            font-size: 1.3rem;
-        }
-
-        /* Table */
-        .table-container {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-        }
-
-        .table-container h4 {
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: var(--dark-text);
-        }
-
-        .table thead th {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            font-weight: 600;
-            padding: 15px;
-        }
-
-        .table tbody td {
-            padding: 15px;
-            vertical-align: middle;
-            border-color: #dee2e6;
-        }
-
-        .table tbody tr:hover {
-            background-color: rgba(13, 138, 188, 0.05);
-        }
-
-        .badge {
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-weight: 500;
-        }
-
-        .badge-success {
-            background-color: rgba(40, 167, 69, 0.15);
-            color: var(--success-color);
-        }
-
-        .badge-warning {
-            background-color: rgba(255, 193, 7, 0.15);
-            color: #856404;
-        }
-
-        .badge-danger {
-            background-color: rgba(220, 53, 69, 0.15);
-            color: var(--danger-color);
-        }
-
-        /* Cash Summary */
-        .cash-summary {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-            height: 100%;
-        }
-
-        .cash-summary h4 {
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: var(--dark-text);
-        }
-
-        .cash-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid #dee2e6;
-        }
-
-        .cash-item:last-child {
-            border-bottom: none;
-        }
-
-        .cash-item .label {
-            font-weight: 500;
-            color: var(--secondary-color);
-        }
-
-        .cash-item .value {
-            font-weight: 700;
-            font-size: 1.2rem;
-        }
-
-        .cash-item.total .value {
-            color: var(--primary-color);
-            font-size: 1.5rem;
-        }
-
-        /* Services Section */
-        .services-section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-        }
-
-        .services-section h4 {
-            font-weight: 600;
-            color: var(--dark-text);
-        }
-
-        .service-card {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 15px;
-            padding: 25px;
-            text-align: center;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            height: 100%;
-        }
-
-        .service-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-            border-color: var(--primary-color);
-        }
-
-        .service-icon {
-            width: 70px;
-            height: 70px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 15px;
-            border: 2px solid #e2e8f0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            padding: 10px;
-        }
-
-        .service-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .service-icon i {
-            font-size: 1.8rem;
-            color: var(--primary-color);
-        }
-
-        .service-card h5 {
-            font-weight: 600;
-            color: var(--dark-text);
-            margin-bottom: 10px;
-        }
-
-        .service-card p {
-            font-size: 0.9rem;
-            margin-bottom: 0;
-        }
-
-        /* Notifications */
-        .notifications {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-            height: 100%;
-        }
-
-        .notifications h4 {
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: var(--dark-text);
-        }
-
-        .notification-item {
-            display: flex;
-            align-items: start;
-            gap: 15px;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .notification-item:hover {
-            background-color: rgba(13, 138, 188, 0.05);
-        }
-
-        .notification-item .icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .notification-item.success .icon {
-            background-color: rgba(40, 167, 69, 0.15);
-            color: var(--success-color);
-        }
-
-        .notification-item.danger .icon {
-            background-color: rgba(220, 53, 69, 0.15);
-            color: var(--danger-color);
-        }
-
-        .notification-item.warning .icon {
-            background-color: rgba(255, 193, 7, 0.15);
-            color: #856404;
-        }
-
-        .notification-item .content {
-            flex: 1;
-        }
-
-        .notification-item .content p {
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-
-        .notification-item .content small {
-            color: var(--secondary-color);
-        }
-
-        /* Responsive */
-        @media (max-width: 991px) {
-            .sidebar {
-                min-height: auto;
-            }
-
-            .sidebar-menu {
-                display: flex;
-                overflow-x: auto;
-                padding: 10px;
-            }
-
-            .sidebar-menu li {
-                margin-bottom: 0;
-                margin-right: 5px;
-                flex-shrink: 0;
-            }
-
-            .sidebar-menu a {
-                padding: 10px 15px;
-                white-space: nowrap;
-            }
-
-            .sidebar-menu a i {
-                width: 20px;
-                margin-right: 8px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .welcome-section {
-                padding: 20px;
-            }
-
-            .welcome-section h2 {
-                font-size: 1.5rem;
-            }
-
-            .stat-card {
-                padding: 20px;
-            }
-
-            .stat-card h3 {
-                font-size: 1.5rem;
-            }
-
-            .action-btn {
-                padding: 15px 20px;
-                font-size: 0.9rem;
-            }
-
-            .table-container,
-            .cash-summary,
-            .notifications {
-                padding: 15px;
-            }
-
-            .table thead th,
-            .table tbody td {
-                padding: 10px;
-                font-size: 0.9rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand text-white" href="#">
-                <i class="fas fa-coins"></i>
-                Askya Finance
-            </a>
-            
-            <div class="user-info text-white">
-                <span class="d-none d-md-inline">{{ $caissier['nom'] }}</span>
-                <img src="{{ $caissier['photo'] }}" alt="Photo de profil" class="user-avatar">
-                <a href="{{ route('logout') }}" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span class="d-none d-md-inline">Déconnexion</span>
-                </a>
+@extends('layouts.dashboard')
+
+@section('title', 'Tableau de Bord - Caissier')
+
+@section('content')
+<div class="page-header">
+    <div class="page-title">
+        <h1>Bonjour, {{ $caissier['nom'] }}</h1>
+        <p>Bienvenue sur votre espace de travail. | {{ date('d/m/Y') }}</p>
+    </div>
+</div>
+
+<!-- Stat Cards Grid -->
+<div class="row g-4 mb-5">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card-premium primary">
+            <div class="icon-box">
+                <i class="fas fa-arrows-rotate"></i>
+            </div>
+            <div>
+                <h3>{{ $statistiques['transactions_jour'] }}</h3>
+                <p>Transactions du jour</p>
             </div>
         </div>
-    </nav>
-
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-lg-2 col-md-3">
-                <div class="sidebar">
-                    <ul class="sidebar-menu">
-                        <li>
-                            <a href="{{ route('caissier.dashboard') }}" class="active">
-                                <i class="fas fa-home"></i>
-                                Tableau de bord
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('caissier.transactions.index') }}">
-                                <i class="fas fa-list"></i>
-                                Liste des transactions
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('caissier.end-of-day.index') }}">
-                                <i class="fas fa-file-alt"></i>
-                                Fiche d'arrêt
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('caissier.search.index') }}">
-                                <i class="fas fa-search"></i>
-                                Rechercher une transaction
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('caissier.caisse.index') }}">
-                                <i class="fas fa-cash-register"></i>
-                                Caisse
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('profile.edit') }}">
-                                <i class="fas fa-user"></i>
-                                Mon profil
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('logout') }}">
-                                <i class="fas fa-sign-out-alt"></i>
-                                Déconnexion
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card-premium success">
+            <div class="icon-box">
+                <i class="fas fa-money-bill-wave"></i>
             </div>
+            <div>
+                <h3>{{ number_format($statistiques['montant_encaisse'], 0, ',', ' ') }} FCFA</h3>
+                <p>Montant encaissé</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card-premium warning">
+            <div class="icon-box">
+                <i class="fas fa-hourglass-half"></i>
+            </div>
+            <div>
+                <h3>{{ $statistiques['transactions_attente'] }}</h3>
+                <p>En attente</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card-premium danger">
+            <div class="icon-box">
+                <i class="fas fa-circle-xmark"></i>
+            </div>
+            <div>
+                <h3>{{ $statistiques['transactions_annulees'] }}</h3>
+                <p>Annulées</p>
+            </div>
+        </div>
+    </div>
+</div>
 
-            <!-- Main Content -->
-            <div class="col-lg-10 col-md-9 py-4">
-                <!-- Welcome Section -->
-                <div class="welcome-section">
-                    <h2>Bonjour, {{ $caissier['nom'] }}</h2>
-                    <p>Bienvenue sur votre espace de travail. | {{ date('d/m/Y') }}</p>
+<!-- Services disponibles Section -->
+<div class="glass-card mb-5">
+    <h4 class="mb-4 fw-bold text-white d-flex align-items-center gap-2">
+        <i class="fas fa-cubes text-primary fs-5"></i>
+        <span>Services disponibles - {{ $caissier['agence'] }}</span>
+    </h4>
+    <div class="row g-4">
+        @foreach($services as $service)
+        <div class="col-lg-4 col-md-6">
+            <a href="{{ route('caissier.service.show', $service->code) }}" class="text-decoration-none d-block h-100">
+                <div class="glass-card p-4 h-100 d-flex flex-column align-items-center text-center transition" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04);">
+                    <div class="service-logo-wrapper mb-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; border-radius: 50%; background: #ffffff; padding: 10px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
+                        @if($service->code === 'WIZ')
+                            <img src="{{ asset('images/logos/wizall money.png') }}" alt="Wizall Money" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        @elseif($service->code === 'COR')
+                            <img src="{{ asset('images/logos/coris money.png') }}" alt="Coris Money" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        @elseif($service->code === 'OM')
+                            <img src="{{ asset('images/logos/orange money.png') }}" alt="Orange Money" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        @elseif($service->code === 'MM')
+                            <img src="{{ asset('images/logos/moov money.png') }}" alt="Moov Money" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        @elseif($service->code === 'TM')
+                            <img src="{{ asset('images/logos/telecel money.png') }}" alt="Telecel Money" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        @elseif($service->code === 'WU')
+                            <img src="{{ asset('images/logos/western union.png') }}" alt="Western Union" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        @elseif($service->code === 'RIA')
+                            <img src="{{ asset('images/logos/RIA.png') }}" alt="RIA" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        @elseif($service->code === 'MGNK')
+                            <img src="{{ asset('images/logos/moneyGram.png') }}" alt="MoneyGram NK" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        @elseif($service->code === 'WUNK')
+                            <img src="{{ asset('images/logos/western union.png') }}" alt="Western Union NK" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        @else
+                            <i class="fas fa-money-bill-transfer text-primary" style="font-size: 2.2rem;"></i>
+                        @endif
+                    </div>
+                    <h5 class="fw-bold text-white mb-2">{{ $service->name }}</h5>
+                    <p class="text-muted small mb-0" style="line-height: 1.4;">{{ $service->description }}</p>
                 </div>
+            </a>
+        </div>
+        @endforeach
+    </div>
+</div>
 
-                <!-- Stat Cards -->
-                <div class="row mb-4">
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <div class="stat-card primary">
-                            <div class="icon-wrapper">
-                                <i class="fas fa-exchange-alt"></i>
-                            </div>
-                            <h3>{{ $statistiques['transactions_jour'] }}</h3>
-                            <p>Transactions du jour</p>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <div class="stat-card success">
-                            <div class="icon-wrapper">
-                                <i class="fas fa-money-bill-wave"></i>
-                            </div>
-                            <h3>{{ number_format($statistiques['montant_encaisse'], 0, ',', ' ') }} FCFA</h3>
-                            <p>Montant encaissé aujourd'hui</p>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <div class="stat-card warning">
-                            <div class="icon-wrapper">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <h3>{{ $statistiques['transactions_attente'] }}</h3>
-                            <p>Transactions en attente</p>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <div class="stat-card danger">
-                            <div class="icon-wrapper">
-                                <i class="fas fa-times-circle"></i>
-                            </div>
-                            <h3>{{ $statistiques['transactions_annulees'] }}</h3>
-                            <p>Transactions annulées</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Services Section -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="services-section">
-                            <h4 class="mb-4"><i class="fas fa-th-large me-2"></i>Services disponibles - {{ $caissier['agence'] }}</h4>
-                            <div class="row">
-                                @foreach($services as $service)
-                                <div class="col-lg-4 col-md-6 mb-3">
-                                    <a href="{{ route('caissier.service.show', $service->code) }}" class="text-decoration-none">
-                                        <div class="service-card">
-                                            <div class="service-icon">
-                                                @if($service->code === 'WIZ')
-                                                    <img src="{{ asset('images/logos/wizall money.png') }}" alt="Wizall Money">
-                                                @elseif($service->code === 'COR')
-                                                    <img src="{{ asset('images/logos/coris money.png') }}" alt="Coris Money">
-                                                @elseif($service->code === 'OM')
-                                                    <img src="{{ asset('images/logos/orange money.png') }}" alt="Orange Money">
-                                                @elseif($service->code === 'MM')
-                                                    <img src="{{ asset('images/logos/moov money.png') }}" alt="Moov Money">
-                                                @elseif($service->code === 'TM')
-                                                    <img src="{{ asset('images/logos/telecel money.png') }}" alt="Telecel Money">
-                                                @elseif($service->code === 'WU')
-                                                    <img src="{{ asset('images/logos/western union.png') }}" alt="Western Union">
-                                                @elseif($service->code === 'RIA')
-                                                    <img src="{{ asset('images/logos/RIA.png') }}" alt="RIA">
-                                                @elseif($service->code === 'MGNK')
-                                                    <img src="{{ asset('images/logos/moneyGram.png') }}" alt="MoneyGram NK">
-                                                @elseif($service->code === 'WUNK')
-                                                    <img src="{{ asset('images/logos/western union.png') }}" alt="Western Union NK">
-                                                @else
-                                                    <i class="fas fa-exchange-alt"></i>
-                                                @endif
-                                            </div>
-                                            <h5>{{ $service->name }}</h5>
-                                            <p class="text-muted">{{ $service->description }}</p>
-                                        </div>
-                                    </a>
-                                </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Table and Cash Summary -->
-                <div class="row mb-4">
-                    <div class="col-lg-8 mb-3">
-                        <div class="table-container">
-                            <h4><i class="fas fa-history me-2"></i>Dernières transactions</h4>
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Référence</th>
-                                            <th>Client</th>
-                                            <th>Montant</th>
-                                            <th>Type</th>
-                                            <th>Date</th>
-                                            <th>Statut</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($transactions as $transaction)
-                                        <tr>
-                                            <td><strong>{{ $transaction['reference'] }}</strong></td>
-                                            <td>{{ $transaction['client'] }}</td>
-                                            <td>{{ number_format($transaction['montant'], 0, ',', ' ') }} FCFA</td>
-                                            <td>{{ $transaction['type'] }}</td>
-                                            <td>{{ $transaction['date'] }}</td>
-                                            <td>
-                                                @if($transaction['statut'] == 'validée')
-                                                    <span class="badge badge-success">Validée</span>
-                                                @elseif($transaction['statut'] == 'en_attente')
-                                                    <span class="badge badge-warning">En attente</span>
-                                                @elseif($transaction['statut'] == 'annulée')
-                                                    <span class="badge badge-danger">Annulée</span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 mb-3">
-                        <div class="cash-summary">
-                            <h4><i class="fas fa-cash-register me-2"></i>Résumé de caisse</h4>
-                            <div class="cash-item">
-                                <span class="label">Ouverture de caisse</span>
-                                <span class="value">{{ number_format($caisse['ouverture'], 0, ',', ' ') }} FCFA</span>
-                            </div>
-                            <div class="cash-item">
-                                <span class="label">Encaissements</span>
-                                <span class="value text-success">+{{ number_format($caisse['encaissements'], 0, ',', ' ') }} FCFA</span>
-                            </div>
-                            <div class="cash-item">
-                                <span class="label">Décaissements</span>
-                                <span class="value text-danger">-{{ number_format($caisse['decaissements'], 0, ',', ' ') }} FCFA</span>
-                            </div>
-                            <div class="cash-item total">
-                                <span class="label">Solde actuel</span>
-                                <span class="value">{{ number_format($caisse['solde'], 0, ',', ' ') }} FCFA</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Notifications -->
-                <div class="row">
-                    <div class="col-lg-6">
-                        <div class="notifications">
-                            <h4><i class="fas fa-bell me-2"></i>Notifications</h4>
-                            @foreach($notifications as $notification)
-                            <div class="notification-item {{ $notification['type'] }}">
-                                <div class="icon">
-                                    @if($notification['type'] == 'success')
-                                        <i class="fas fa-check"></i>
-                                    @elseif($notification['type'] == 'danger')
-                                        <i class="fas fa-times"></i>
-                                    @elseif($notification['type'] == 'warning')
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                    @endif
-                                </div>
-                                <div class="content">
-                                    <p>{{ $notification['message'] }}</p>
-                                    <small>{{ $notification['heure'] }}</small>
-                                </div>
-                            </div>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
+<!-- Transactions and Cash Register Status -->
+<div class="row g-5">
+    <!-- Transactions Table -->
+    <div class="col-xl-8">
+        <div class="glass-card h-100">
+            <h4 class="mb-4 fw-bold text-white d-flex align-items-center gap-2">
+                <i class="fas fa-history text-primary fs-5"></i>
+                <span>Dernières transactions</span>
+            </h4>
+            <div class="table-responsive-custom">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th>Client</th>
+                            <th>Montant</th>
+                            <th>Type</th>
+                            <th>Date</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($transactions as $transaction)
+                        <tr>
+                            <td><strong>{{ $transaction['reference'] }}</strong></td>
+                            <td>{{ $transaction['client'] }}</td>
+                            <td class="fw-bold">{{ number_format($transaction['montant'], 0, ',', ' ') }} FCFA</td>
+                            <td>
+                                @if($transaction['type'] === 'encaissement')
+                                    <span class="text-success"><i class="fas fa-arrow-trend-down me-1"></i> Entrée</span>
+                                @else
+                                    <span class="text-danger"><i class="fas fa-arrow-trend-up me-1"></i> Sortie</span>
+                                @endif
+                            </td>
+                            <td>{{ $transaction['date'] }}</td>
+                            <td>
+                                @if($transaction['statut'] == 'validée')
+                                    <span class="badge-premium badge-premium-success">Validée</span>
+                                @elseif($transaction['statut'] == 'en_attente')
+                                    <span class="badge-premium badge-premium-warning">En attente</span>
+                                @else
+                                    <span class="badge-premium badge-premium-danger">Annulée</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">Aucune transaction récente.</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    <!-- Cash Balance Summary -->
+    <div class="col-xl-4">
+        <div class="glass-card h-100">
+            <h4 class="mb-4 fw-bold text-white d-flex align-items-center gap-2">
+                <i class="fas fa-cash-register text-primary fs-5"></i>
+                <span>Résumé de caisse</span>
+            </h4>
+            
+            <div class="d-flex flex-column gap-3">
+                <div class="d-flex justify-content-between align-items-center p-3 rounded-4" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.03);">
+                    <span class="text-muted fw-bold">Ouverture</span>
+                    <span class="fw-bold text-white">{{ number_format($caisse['ouverture'], 0, ',', ' ') }} FCFA</span>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center p-3 rounded-4" style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.08);">
+                    <span class="text-muted fw-bold">Encaissements</span>
+                    <span class="fw-bold text-success">+{{ number_format($caisse['encaissements'], 0, ',', ' ') }} FCFA</span>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center p-3 rounded-4" style="background: rgba(239, 68, 68, 0.04); border: 1px solid rgba(239, 68, 68, 0.08);">
+                    <span class="text-muted fw-bold">Décaissements</span>
+                    <span class="fw-bold text-danger">-{{ number_format($caisse['decaissements'], 0, ',', ' ') }} FCFA</span>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center p-4 rounded-4 mt-2" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%); border: 1px solid rgba(59, 130, 246, 0.15);">
+                    <span class="text-white fw-bold fs-6">Solde actuel</span>
+                    <span class="fw-extrabold text-primary fs-5">{{ number_format($caisse['solde'], 0, ',', ' ') }} FCFA</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications Section -->
+<div class="glass-card mt-5">
+    <h4 class="mb-4 fw-bold text-white d-flex align-items-center gap-2">
+        <i class="fas fa-bell text-primary fs-5"></i>
+        <span>Notifications récentes</span>
+    </h4>
+    <div class="d-flex flex-column gap-3">
+        @forelse($notifications as $notification)
+            <div class="d-flex align-items-start gap-3 p-3 rounded-4" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0; background: 
+                    @if($notification['type'] === 'success') rgba(16, 185, 129, 0.1) @elseif($notification['type'] === 'danger') rgba(239, 68, 68, 0.1) @else rgba(245, 158, 11, 0.1) @endif; color:
+                    @if($notification['type'] === 'success') #34d399 @elseif($notification['type'] === 'danger') #f87171 @else #fbbf24 @endif;">
+                    
+                    @if($notification['type'] === 'success')
+                        <i class="fas fa-circle-check"></i>
+                    @elseif($notification['type'] === 'danger')
+                        <i class="fas fa-circle-xmark"></i>
+                    @else
+                        <i class="fas fa-triangle-exclamation"></i>
+                    @endif
+                </div>
+                <div class="flex-grow-1">
+                    <p class="mb-1 text-white fw-semibold">{{ $notification['message'] }}</p>
+                    <small class="text-muted">{{ $notification['heure'] }}</small>
+                </div>
+            </div>
+        @empty
+            <p class="text-muted mb-0">Aucune nouvelle notification.</p>
+        @endforelse
+    </div>
+</div>
+@endsection

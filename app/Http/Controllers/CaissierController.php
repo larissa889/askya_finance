@@ -36,9 +36,15 @@ class CaissierController extends Controller
             'agence' => $agency->name
         ];
 
-        // Calculer les statistiques réelles pour l'agence du caissier
+        // Récupérer la caisse active du caissier
+        $cashRegister = \App\Models\CashRegister::where('assigned_to', $user->id)
+            ->where('agency_id', $agency->id)
+            ->where('status', 'open')
+            ->first();
+
         $today = now()->startOfDay();
-        
+
+        // Calculer les statistiques réelles pour l'agence du caissier
         $statistiques = [
             'transactions_jour' => Transaction::where('agency_id', $agency->id)
                 ->where('created_by', $user->id)
@@ -47,15 +53,15 @@ class CaissierController extends Controller
             'montant_encaisse' => Transaction::where('agency_id', $agency->id)
                 ->where('created_by', $user->id)
                 ->whereDate('created_at', '>=', $today)
-                ->where('status', 'approved')
+                ->where('status', 'reconciled')
                 ->sum('amount'),
             'transactions_attente' => Transaction::where('agency_id', $agency->id)
                 ->where('created_by', $user->id)
-                ->where('status', 'pending')
+                ->where('status', 'recorded')
                 ->count(),
             'transactions_annulees' => Transaction::where('agency_id', $agency->id)
                 ->where('created_by', $user->id)
-                ->where('status', 'rejected')
+                ->where('status', 'discrepancy')
                 ->count()
         ];
 
@@ -66,21 +72,43 @@ class CaissierController extends Controller
             ->limit(5)
             ->get()
             ->map(function ($transaction) {
+                $statutView = 'en_attente';
+                if ($transaction->status === 'reconciled') {
+                    $statutView = 'validée';
+                } elseif ($transaction->status === 'discrepancy') {
+                    $statutView = 'annulée';
+                }
+
                 return [
                     'reference' => $transaction->reference,
                     'client' => $transaction->client_name,
                     'montant' => $transaction->amount,
-                    'type' => $transaction->type,
+                    'type' => $transaction->type === 'deposit' ? 'Dépôt' : ($transaction->type === 'withdraw' ? 'Retrait' : ($transaction->type === 'transfer' ? 'Transfert' : 'Paiement')),
                     'date' => $transaction->created_at->format('d/m/Y H:i'),
-                    'statut' => $transaction->status
+                    'statut' => $statutView
                 ];
             });
 
+        // Calculer les encaissements et décaissements réels pour la caisse physique
+        $encaissements = Transaction::where('agency_id', $agency->id)
+            ->where('created_by', $user->id)
+            ->whereDate('created_at', '>=', $today)
+            ->whereIn('type', ['deposit', 'transfer'])
+            ->sum('amount');
+
+        $decaissements = Transaction::where('agency_id', $agency->id)
+            ->where('created_by', $user->id)
+            ->whereDate('created_at', '>=', $today)
+            ->whereIn('type', ['withdraw', 'payment'])
+            ->sum('amount');
+
+        $ouvertureCaisse = $cashRegister ? $cashRegister->balance : 0;
+
         $caisse = [
-            'ouverture' => $agency->cash_balance,
-            'encaissements' => $statistiques['montant_encaisse'],
-            'decaissements' => 0,
-            'solde' => $agency->cash_balance + $statistiques['montant_encaisse']
+            'ouverture' => $ouvertureCaisse,
+            'encaissements' => $encaissements,
+            'decaissements' => $decaissements,
+            'solde' => $ouvertureCaisse + $encaissements - $decaissements
         ];
 
         $notifications = [

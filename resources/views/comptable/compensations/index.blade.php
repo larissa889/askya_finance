@@ -1,513 +1,135 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compensations | Askya Finance</title>
-    
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    
-    <style>
-        :root {
-            --primary-dark: #0F172A;
-            --primary-blue: #2563EB;
-            --primary-blue-light: #3b82f6;
-            --white: #ffffff;
-            --light-gray: #f8f9fa;
-            --border-color: #e2e8f0;
-            --text-dark: #1e293b;
-            --text-muted: #64748b;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #06b6d4;
-        }
+@extends('layouts.dashboard')
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--light-gray);
-            color: var(--text-dark);
-            margin: 0;
-            padding: 0;
-        }
+@section('title', 'Toutes les Compensations')
 
-        /* Header */
-        .header {
-            background: var(--white);
-            border-bottom: 1px solid var(--border-color);
-            padding: 15px 30px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
+@section('content')
+<div class="page-header">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb" style="background: transparent; padding: 0;">
+            <li class="breadcrumb-item"><a href="{{ route('comptable.dashboard') }}" class="text-primary text-decoration-none">Dashboard</a></li>
+            <li class="breadcrumb-item active text-muted" aria-current="page">Compensations</li>
+        </ol>
+    </nav>
+    <div class="page-title">
+        <h1>Toutes les compensations</h1>
+        <p>Consultez l'historique complet et les détails des règlements de compensation inter-agences.</p>
+    </div>
+</div>
 
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header-brand {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary-dark);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .header-brand i {
-            color: var(--primary-blue);
-        }
-
-        .header-user {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .header-user img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
-        .header-user-info {
-            text-align: right;
-        }
-
-        .header-user-info .name {
-            font-weight: 600;
-            color: var(--text-dark);
-            font-size: 0.9rem;
-        }
-
-        .header-user-info .role {
-            color: var(--text-muted);
-            font-size: 0.8rem;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 70px;
-            left: 0;
-            width: 260px;
-            height: calc(100vh - 70px);
-            background: var(--white);
-            border-right: 1px solid var(--border-color);
-            overflow-y: auto;
-            z-index: 999;
-        }
-
-        .sidebar-menu {
-            list-style: none;
-            padding: 20px 0;
-            margin: 0;
-        }
-
-        .sidebar-menu li {
-            margin-bottom: 5px;
-        }
-
-        .sidebar-menu a {
-            display: flex;
-            align-items: center;
-            padding: 12px 25px;
-            color: var(--text-muted);
-            text-decoration: none;
-            transition: all 0.3s ease;
-            border-left: 3px solid transparent;
-            font-size: 0.95rem;
-        }
-
-        .sidebar-menu a:hover,
-        .sidebar-menu a.active {
-            background-color: rgba(37, 99, 235, 0.05);
-            border-left-color: var(--primary-blue);
-            color: var(--primary-blue);
-        }
-
-        .sidebar-menu a i {
-            width: 25px;
-            margin-right: 12px;
-            font-size: 1.1rem;
-        }
-
-        .sidebar-divider {
-            height: 1px;
-            background: var(--border-color);
-            margin: 15px 25px;
-        }
-
-        /* Main Content */
-        .main-content {
-            margin-left: 260px;
-            margin-top: 70px;
-            padding: 30px;
-            min-height: calc(100vh - 70px);
-        }
-
-        /* Breadcrumb */
-        .breadcrumb {
-            background: transparent;
-            padding: 0;
-            margin-bottom: 20px;
-        }
-
-        .breadcrumb-item a {
-            color: var(--primary-blue);
-            text-decoration: none;
-        }
-
-        .breadcrumb-item.active {
-            color: var(--text-muted);
-        }
-
-        /* Table Card */
-        .table-card {
-            background: var(--white);
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            border: 1px solid var(--border-color);
-        }
-
-        .table-card h4 {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: var(--text-dark);
-        }
-
-        /* Filters */
-        .filters {
-            background: var(--light-gray);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .form-control,
-        .form-select {
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px 15px;
-            font-size: 0.9rem;
-        }
-
-        .form-control:focus,
-        .form-select:focus {
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        .btn-filter {
-            background: var(--primary-blue);
-            color: var(--white);
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-filter:hover {
-            background: #1d4ed8;
-        }
-
-        /* Table */
-        .table thead th {
-            background-color: var(--primary-dark);
-            color: var(--white);
-            border: none;
-            font-weight: 600;
-            padding: 15px;
-            font-size: 0.9rem;
-        }
-
-        .table tbody td {
-            padding: 15px;
-            vertical-align: middle;
-            border-color: var(--border-color);
-            font-size: 0.95rem;
-        }
-
-        .table tbody tr:hover {
-            background-color: rgba(37, 99, 235, 0.03);
-        }
-
-        .badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-weight: 500;
-            font-size: 0.85rem;
-        }
-
-        .badge-validée {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--success);
-        }
-
-        .badge-en_attente {
-            background: rgba(245, 158, 11, 0.15);
-            color: var(--warning);
-        }
-
-        .badge-payée {
-            background: rgba(37, 99, 235, 0.15);
-            color: var(--primary-blue);
-        }
-
-        .btn-view {
-            background: rgba(37, 99, 235, 0.1);
-            color: var(--primary-blue);
-            border: 1px solid rgba(37, 99, 235, 0.2);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-view:hover {
-            background: var(--primary-blue);
-            color: var(--white);
-        }
-
-        /* Pagination */
-        .pagination .page-link {
-            color: var(--primary-blue);
-            border-color: var(--border-color);
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin: 0 2px;
-        }
-
-        .pagination .page-item.active .page-link {
-            background-color: var(--primary-blue);
-            border-color: var(--primary-blue);
-        }
-
-        .pagination .page-link:hover {
-            background-color: rgba(37, 99, 235, 0.1);
-        }
-
-        /* Responsive */
-        @media (max-width: 991px) {
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-            }
-
-            .sidebar.active {
-                transform: translateX(0);
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                padding: 15px 20px;
-            }
-
-            .header-brand {
-                font-size: 1.2rem;
-            }
-
-            .main-content {
-                padding: 20px;
-            }
-
-            .table-card {
-                padding: 20px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Header -->
-    <div class="header">
-        <div class="container-fluid">
-            <div class="header-content">
-                <div class="header-brand">
-                    <i class="fas fa-coins"></i>
-                    <span>Askya Finance</span>
-                </div>
-                <div class="header-user">
-                    <div class="header-user-info">
-                        <div class="name">{{ Auth::user()->name }}</div>
-                        <div class="role">Comptable</div>
-                    </div>
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=0D8ABC&color=fff&size=128" alt="Avatar">
-                </div>
+<!-- Filters Card -->
+<div class="glass-card mb-4">
+    <form action="{{ route('comptable.compensations.index') }}" method="GET">
+        <div class="row g-3">
+            <div class="col-lg-3 col-md-6">
+                <label for="search" class="form-label-custom">Rechercher</label>
+                <input type="text" class="form-control-custom" id="search" name="search" 
+                       placeholder="Référence, agence..." value="{{ $search }}">
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <label for="statut" class="form-label-custom">Statut</label>
+                <select class="form-control-custom form-select-custom" id="statut" name="statut">
+                    <option value="">Tous les statuts</option>
+                    <option value="en_attente" {{ $statut == 'en_attente' ? 'selected' : '' }}>En attente</option>
+                    <option value="validée" {{ $statut == 'validée' ? 'selected' : '' }}>Validée</option>
+                    <option value="payée" {{ $statut == 'payée' ? 'selected' : '' }}>Payée</option>
+                </select>
+            </div>
+            
+            <div class="col-lg-2 col-md-6">
+                <label for="date_debut" class="form-label-custom">Date début</label>
+                <input type="date" class="form-control-custom" id="date_debut" name="date_debut" 
+                       value="{{ $date_debut }}">
+            </div>
+            
+            <div class="col-lg-2 col-md-6">
+                <label for="date_fin" class="form-label-custom">Date fin</label>
+                <input type="date" class="form-control-custom" id="date_fin" name="date_fin" 
+                       value="{{ $date_fin }}">
+            </div>
+            
+            <div class="col-lg-2 col-md-12 d-flex align-items-end">
+                <button type="submit" class="btn-custom btn-custom-primary w-100 py-2.5 justify-content-center">
+                    <i class="fas fa-filter"></i> Filtrer
+                </button>
             </div>
         </div>
+    </form>
+</div>
+
+<!-- Compensations Table -->
+<div class="glass-card">
+    <div class="table-responsive-custom">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>Référence</th>
+                    <th>Transaction</th>
+                    <th>Agence Source</th>
+                    <th>Agence Destination</th>
+                    <th>Montant</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($compensations as $compensation)
+                <tr>
+                    <td><strong>{{ $compensation['reference'] }}</strong></td>
+                    <td>{{ $compensation['transaction'] }}</td>
+                    <td>{{ $compensation['agence_source'] }}</td>
+                    <td>{{ $compensation['agence_destination'] }}</td>
+                    <td class="fw-bold text-white">{{ number_format($compensation['montant'], 0, ',', ' ') }} FCFA</td>
+                    <td>
+                        @if($compensation['statut'] === 'en_attente')
+                            <span class="badge-premium badge-premium-warning">En attente</span>
+                        @elseif($compensation['statut'] === 'payée' || $compensation['statut'] === 'payé')
+                            <span class="badge-premium badge-premium-success">Payée</span>
+                        @elseif($compensation['statut'] === 'validée' || $compensation['statut'] === 'validé')
+                            <span class="badge-premium badge-premium-info">Validée</span>
+                        @else
+                            <span class="badge-premium">{{ ucfirst($compensation['statut']) }}</span>
+                        @endif
+                    </td>
+                    <td>{{ $compensation['date'] }}</td>
+                    <td>
+                        <a href="{{ route('comptable.compensations.show', $compensation['id']) }}" class="btn-custom btn-custom-primary py-1.5 px-3">
+                            <i class="fas fa-eye"></i> Voir
+                        </a>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-5">
+                        <i class="fas fa-scale-unbalanced d-block mb-3 fs-3 text-muted" style="opacity: 0.5;"></i>
+                        Aucune compensation ne correspond aux critères de filtrage.
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <ul class="sidebar-menu">
-            <li>
-                <a href="{{ route('comptable.dashboard') }}">
-                    <i class="fas fa-home"></i>
-                    Dashboard
-                </a>
+    <!-- Pagination -->
+    <div class="d-flex justify-content-center mt-4">
+        <ul class="pagination" style="gap: 5px;">
+            <li class="page-item disabled">
+                <a class="page-link" href="#" style="background: rgba(255,255,255,0.02); border-color: var(--border-glass); color: var(--text-muted); border-radius: 10px;">Précédent</a>
             </li>
-            <li>
-                <a href="{{ route('comptable.compensations.index') }}" class="active">
-                    <i class="fas fa-exchange-alt"></i>
-                    Compensations
-                </a>
+            <li class="page-item active">
+                <a class="page-link" href="#" style="background: var(--primary); border-color: var(--primary); color: white; border-radius: 10px; font-weight: 700;">1</a>
             </li>
-            <li>
-                <a href="{{ route('comptable.solde.index') }}">
-                    <i class="fas fa-wallet"></i>
-                    Solde
-                </a>
+            <li class="page-item">
+                <a class="page-link" href="#" style="background: rgba(255,255,255,0.02); border-color: var(--border-glass); color: var(--text-light); border-radius: 10px;">2</a>
             </li>
-            <li>
-                <a href="{{ route('comptable.reports.index') }}">
-                    <i class="fas fa-file-alt"></i>
-                    Rapports financiers
-                </a>
+            <li class="page-item">
+                <a class="page-link" href="#" style="background: rgba(255,255,255,0.02); border-color: var(--border-glass); color: var(--text-light); border-radius: 10px;">3</a>
             </li>
-            <div class="sidebar-divider"></div>
-            <li>
-                <a href="{{ route('comptable.profile.index') }}">
-                    <i class="fas fa-user"></i>
-                    Mon profil
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('logout') }}">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Déconnexion
-                </a>
+            <li class="page-item">
+                <a class="page-link" href="#" style="background: rgba(255,255,255,0.02); border-color: var(--border-glass); color: var(--text-light); border-radius: 10px;">Suivant</a>
             </li>
         </ul>
     </div>
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Breadcrumb -->
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('comptable.dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item active">Compensations</li>
-            </ol>
-        </nav>
-
-        <div class="table-card">
-            <h4><i class="fas fa-exchange-alt me-2"></i>Toutes les compensations</h4>
-
-            <!-- Filters -->
-            <div class="filters">
-                <form action="{{ route('comptable.compensations.index') }}" method="GET">
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <label for="search" class="form-label">Rechercher</label>
-                            <input type="text" class="form-control" id="search" name="search" 
-                                   placeholder="Référence, agence..." value="{{ $search }}">
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label for="statut" class="form-label">Statut</label>
-                            <select class="form-select" id="statut" name="statut">
-                                <option value="">Tous</option>
-                                <option value="en_attente" {{ $statut == 'en_attente' ? 'selected' : '' }}>En attente</option>
-                                <option value="validée" {{ $statut == 'validée' ? 'selected' : '' }}>Validée</option>
-                                <option value="payée" {{ $statut == 'payée' ? 'selected' : '' }}>Payée</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 mb-3">
-                            <label for="date_debut" class="form-label">Date début</label>
-                            <input type="date" class="form-control" id="date_debut" name="date_debut" 
-                                   value="{{ $date_debut }}">
-                        </div>
-                        <div class="col-md-2 mb-3">
-                            <label for="date_fin" class="form-label">Date fin</label>
-                            <input type="date" class="form-control" id="date_fin" name="date_fin" 
-                                   value="{{ $date_fin }}">
-                        </div>
-                        <div class="col-md-2 mb-3">
-                            <label class="form-label">&nbsp;</label>
-                            <button type="submit" class="btn btn-filter w-100">
-                                <i class="fas fa-search me-2"></i>Filtrer
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Table -->
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Référence</th>
-                            <th>Transaction</th>
-                            <th>Agence source</th>
-                            <th>Agence destination</th>
-                            <th>Montant</th>
-                            <th>Statut</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($compensations as $compensation)
-                        <tr>
-                            <td><strong>{{ $compensation['reference'] }}</strong></td>
-                            <td>{{ $compensation['transaction'] }}</td>
-                            <td>{{ $compensation['agence_source'] }}</td>
-                            <td>{{ $compensation['agence_destination'] }}</td>
-                            <td>{{ number_format($compensation['montant'], 0, ',', ' ') }} FCFA</td>
-                            <td>
-                                <span class="badge badge-{{ $compensation['statut'] }}">
-                                    {{ ucfirst(str_replace('_', ' ', $compensation['statut'])) }}
-                                </span>
-                            </td>
-                            <td>{{ $compensation['date'] }}</td>
-                            <td>
-                                <a href="{{ route('comptable.compensations.show', $compensation['id']) }}" class="btn btn-view">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center mt-4">
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#" tabindex="-1">Précédent</a>
-                    </li>
-                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                    <li class="page-item"><a class="page-link" href="#">2</a></li>
-                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    <li class="page-item">
-                        <a class="page-link" href="#">Suivant</a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
-    </div>
-
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+</div>
+@endsection

@@ -1,610 +1,166 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Comptable | Askya Finance</title>
-    
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    
-    <style>
-        :root {
-            --primary-dark: #0F172A;
-            --primary-blue: #2563EB;
-            --primary-blue-light: #3b82f6;
-            --white: #ffffff;
-            --light-gray: #f8f9fa;
-            --border-color: #e2e8f0;
-            --text-dark: #1e293b;
-            --text-muted: #64748b;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #06b6d4;
-        }
+@extends('layouts.dashboard')
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--light-gray);
-            color: var(--text-dark);
-            margin: 0;
-            padding: 0;
-        }
+@section('title', 'Tableau de Bord - Comptable')
 
-        /* Header */
-        .header {
-            background: var(--white);
-            border-bottom: 1px solid var(--border-color);
-            padding: 15px 30px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
+@section('content')
+<div class="page-header">
+    <div class="page-title">
+        <h1>Bonjour, {{ Auth::user()->name }}</h1>
+        <p>Bienvenue sur votre espace comptable. | {{ date('d/m/Y') }}</p>
+    </div>
+</div>
 
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header-brand {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary-dark);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .header-brand i {
-            color: var(--primary-blue);
-        }
-
-        .header-user {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .header-user img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
-        .header-user-info {
-            text-align: right;
-        }
-
-        .header-user-info .name {
-            font-weight: 600;
-            color: var(--text-dark);
-            font-size: 0.9rem;
-        }
-
-        .header-user-info .role {
-            color: var(--text-muted);
-            font-size: 0.8rem;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 70px;
-            left: 0;
-            width: 260px;
-            height: calc(100vh - 70px);
-            background: var(--white);
-            border-right: 1px solid var(--border-color);
-            overflow-y: auto;
-            z-index: 999;
-        }
-
-        .sidebar-menu {
-            list-style: none;
-            padding: 20px 0;
-            margin: 0;
-        }
-
-        .sidebar-menu li {
-            margin-bottom: 5px;
-        }
-
-        .sidebar-menu a {
-            display: flex;
-            align-items: center;
-            padding: 12px 25px;
-            color: var(--text-muted);
-            text-decoration: none;
-            transition: all 0.3s ease;
-            border-left: 3px solid transparent;
-            font-size: 0.95rem;
-        }
-
-        .sidebar-menu a:hover,
-        .sidebar-menu a.active {
-            background-color: rgba(37, 99, 235, 0.05);
-            border-left-color: var(--primary-blue);
-            color: var(--primary-blue);
-        }
-
-        .sidebar-menu a i {
-            width: 25px;
-            margin-right: 12px;
-            font-size: 1.1rem;
-        }
-
-        .sidebar-divider {
-            height: 1px;
-            background: var(--border-color);
-            margin: 15px 25px;
-        }
-
-        /* Main Content */
-        .main-content {
-            margin-left: 260px;
-            margin-top: 70px;
-            padding: 30px;
-            min-height: calc(100vh - 70px);
-        }
-
-        /* Welcome Section */
-        .welcome-section {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, #1e293b 100%);
-            color: var(--white);
-            border-radius: 16px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);
-        }
-
-        .welcome-section h2 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-
-        .welcome-section p {
-            color: rgba(255, 255, 255, 0.8);
-            margin-bottom: 0;
-        }
-
-        /* Stat Cards */
-        .stat-card {
-            background: var(--white);
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            border: 1px solid var(--border-color);
-            height: 100%;
-            transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        .stat-card .icon-wrapper {
-            width: 60px;
-            height: 60px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            margin-bottom: 15px;
-        }
-
-        .stat-card.primary .icon-wrapper {
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
-            color: var(--primary-blue);
-        }
-
-        .stat-card.success .icon-wrapper {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(52, 211, 153, 0.15) 100%);
-            color: var(--success);
-        }
-
-        .stat-card.info .icon-wrapper {
-            background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(34, 211, 238, 0.15) 100%);
-            color: var(--info);
-        }
-
-        .stat-card.warning .icon-wrapper {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(251, 191, 36, 0.15) 100%);
-            color: var(--warning);
-        }
-
-        .stat-card h3 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-            color: var(--text-dark);
-        }
-
-        .stat-card p {
-            color: var(--text-muted);
-            margin-bottom: 0;
-            font-weight: 500;
-            font-size: 0.95rem;
-        }
-
-        /* Table Card */
-        .table-card {
-            background: var(--white);
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            border: 1px solid var(--border-color);
-        }
-
-        .table-card h4 {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: var(--text-dark);
-        }
-
-        .table thead th {
-            background-color: var(--primary-dark);
-            color: var(--white);
-            border: none;
-            font-weight: 600;
-            padding: 15px;
-            font-size: 0.9rem;
-        }
-
-        .table tbody td {
-            padding: 15px;
-            vertical-align: middle;
-            border-color: var(--border-color);
-            font-size: 0.95rem;
-        }
-
-        .table tbody tr:hover {
-            background-color: rgba(37, 99, 235, 0.03);
-        }
-
-        .badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-weight: 500;
-            font-size: 0.85rem;
-        }
-
-        .badge-en_attente {
-            background: rgba(245, 158, 11, 0.15);
-            color: var(--warning);
-        }
-
-        .badge-paye {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--success);
-        }
-
-        .badge-valide {
-            background: rgba(37, 99, 235, 0.15);
-            color: var(--primary-blue);
-        }
-
-        .btn-validate {
-            background: var(--primary-blue);
-            color: var(--white);
-            border: none;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-validate:hover {
-            background: #1d4ed8;
-        }
-
-        .btn-pay {
-            background: var(--success);
-            color: var(--white);
-            border: none;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-pay:hover {
-            background: #059669;
-        }
-
-        .btn-export {
-            background: var(--white);
-            color: var(--text-dark);
-            border: 1px solid var(--border-color);
-            padding: 8px 15px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-export:hover {
-            background: var(--light-gray);
-        }
-
-        /* Action Buttons */
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        /* Alerts */
-        .alert {
-            border-radius: 12px;
-            border: none;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-        }
-
-        .alert-success {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(52, 211, 153, 0.15) 100%);
-            color: var(--success);
-        }
-
-        /* Responsive */
-        @media (max-width: 991px) {
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-            }
-
-            .sidebar.active {
-                transform: translateX(0);
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                padding: 15px 20px;
-            }
-
-            .header-brand {
-                font-size: 1.2rem;
-            }
-
-            .main-content {
-                padding: 20px;
-            }
-
-            .welcome-section {
-                padding: 20px;
-            }
-
-            .stat-card {
-                padding: 20px;
-            }
-
-            .stat-card h3 {
-                font-size: 1.5rem;
-            }
-
-            .table-card {
-                padding: 20px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Header -->
-    <div class="header">
-        <div class="container-fluid">
-            <div class="header-content">
-                <div class="header-brand">
-                    <i class="fas fa-coins"></i>
-                    <span>Askya Finance</span>
-                </div>
-                <div class="header-user">
-                    <div class="header-user-info">
-                        <div class="name">{{ Auth::user()->name }}</div>
-                        <div class="role">Comptable</div>
-                    </div>
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=0D8ABC&color=fff&size=128" alt="Avatar">
-                </div>
+<!-- Stat Cards Grid -->
+<div class="row g-4 mb-5">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card-premium primary">
+            <div class="icon-box">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div>
+                <h3>{{ number_format($statistiques['a_regler'], 0, ',', ' ') }} FCFA</h3>
+                <p>À régler</p>
             </div>
         </div>
     </div>
-
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <ul class="sidebar-menu">
-            <li>
-                <a href="{{ route('comptable.dashboard') }}" class="active">
-                    <i class="fas fa-home"></i>
-                    Dashboard
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('comptable.compensations.index') }}">
-                    <i class="fas fa-exchange-alt"></i>
-                    Compensations
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('comptable.solde.index') }}">
-                    <i class="fas fa-wallet"></i>
-                    Solde
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('comptable.reports.index') }}">
-                    <i class="fas fa-file-alt"></i>
-                    Rapports financiers
-                </a>
-            </li>
-            <div class="sidebar-divider"></div>
-            <li>
-                <a href="{{ route('comptable.profile.index') }}">
-                    <i class="fas fa-user"></i>
-                    Mon profil
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('logout') }}">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Déconnexion
-                </a>
-            </li>
-        </ul>
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Welcome Section -->
-        <div class="welcome-section">
-            <h2>Bonjour, {{ Auth::user()->name }}</h2>
-            <p>Bienvenue sur votre espace comptable. | {{ date('d/m/Y') }}</p>
-        </div>
-
-        @if(session('success'))
-        <div class="alert alert-success">
-            <i class="fas fa-check-circle me-2"></i>
-            {{ session('success') }}
-        </div>
-        @endif
-
-        <!-- Stat Cards -->
-        <div class="row mb-4">
-            <div class="col-lg-3 col-md-6 mb-3">
-                <div class="stat-card primary">
-                    <div class="icon-wrapper">
-                        <i class="fas fa-money-bill-wave"></i>
-                    </div>
-                    <h3>{{ number_format($statistiques['a_regler'], 0, ',', ' ') }} FCFA</h3>
-                    <p>À régler</p>
-                </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card-premium success">
+            <div class="icon-box">
+                <i class="fas fa-circle-check"></i>
             </div>
-            <div class="col-lg-3 col-md-6 mb-3">
-                <div class="stat-card success">
-                    <div class="icon-wrapper">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <h3>{{ number_format($statistiques['compenses'], 0, ',', ' ') }} FCFA</h3>
-                    <p>Compensés</p>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 mb-3">
-                <div class="stat-card info">
-                    <div class="icon-wrapper">
-                        <i class="fas fa-wallet"></i>
-                    </div>
-                    <h3>{{ number_format($statistiques['solde_global'], 0, ',', ' ') }} FCFA</h3>
-                    <p>Solde global</p>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 mb-3">
-                <div class="stat-card warning">
-                    <div class="icon-wrapper">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h3>{{ $statistiques['operations'] }}</h3>
-                    <p>Opérations</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Compensations -->
-        <div class="table-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h4><i class="fas fa-exchange-alt me-2"></i>Compensations du jour</h4>
-                <div class="action-buttons">
-                    <form action="{{ route('comptable.rapport') }}" method="POST" style="display: inline;">
-                        @csrf
-                        <button type="submit" class="btn btn-export">
-                            <i class="fas fa-file-pdf me-2"></i>Rapport
-                        </button>
-                    </form>
-                    <form action="{{ route('comptable.export') }}" method="POST" style="display: inline;">
-                        @csrf
-                        <input type="hidden" name="format" value="pdf">
-                        <button type="submit" class="btn btn-export">
-                            <i class="fas fa-download me-2"></i>PDF
-                        </button>
-                    </form>
-                    <form action="{{ route('comptable.export') }}" method="POST" style="display: inline;">
-                        @csrf
-                        <input type="hidden" name="format" value="excel">
-                        <button type="submit" class="btn btn-export">
-                            <i class="fas fa-file-excel me-2"></i>Excel
-                        </button>
-                    </form>
-                </div>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Référence</th>
-                            <th>Agence source</th>
-                            <th>Agence destinataire</th>
-                            <th>Montant</th>
-                            <th>Statut</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($compensations as $compensation)
-                        <tr>
-                            <td><strong>{{ $compensation['reference'] }}</strong></td>
-                            <td>{{ $compensation['agence_source'] }}</td>
-                            <td>{{ $compensation['agence_dest'] }}</td>
-                            <td>{{ number_format($compensation['montant'], 0, ',', ' ') }} FCFA</td>
-                            <td>
-                                <span class="badge badge-{{ $compensation['statut'] }}">
-                                    {{ ucfirst(str_replace('_', ' ', $compensation['statut'])) }}
-                                </span>
-                            </td>
-                            <td>{{ $compensation['date'] }}</td>
-                            <td>
-                                <div class="action-buttons">
-                                    @if($compensation['statut'] == 'en_attente')
-                                    <form action="{{ route('comptable.valider', $compensation['id']) }}" method="POST" style="display: inline;">
-                                        @csrf
-                                        <button type="submit" class="btn btn-validate">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                    </form>
-                                    <form action="{{ route('comptable.payer', $compensation['id']) }}" method="POST" style="display: inline;">
-                                        @csrf
-                                        <button type="submit" class="btn btn-pay">
-                                            <i class="fas fa-dollar-sign"></i>
-                                        </button>
-                                    </form>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+            <div>
+                <h3>{{ number_format($statistiques['compenses'], 0, ',', ' ') }} FCFA</h3>
+                <p>Compensés</p>
             </div>
         </div>
     </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card-premium info">
+            <div class="icon-box">
+                <i class="fas fa-wallet"></i>
+            </div>
+            <div>
+                <h3>{{ number_format($statistiques['solde_global'], 0, ',', ' ') }} FCFA</h3>
+                <p>Solde global</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card-premium warning">
+            <div class="icon-box">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div>
+                <h3>{{ $statistiques['operations'] }}</h3>
+                <p>Opérations traitées</p>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<!-- Compensations List -->
+<div class="glass-card">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <h4 class="fw-bold text-white mb-0 d-flex align-items-center gap-2">
+            <i class="fas fa-scale-balanced text-primary fs-5"></i>
+            <span>Compensations du jour</span>
+        </h4>
+        
+        <div class="d-flex flex-wrap gap-2">
+            <!-- Rapports -->
+            <form action="{{ route('comptable.rapport') }}" method="POST" style="display: inline;">
+                @csrf
+                <button type="submit" class="btn-custom py-2 px-3">
+                    <i class="fas fa-file-pdf text-danger"></i> Rapport PDF
+                </button>
+            </form>
+            
+            <form action="{{ route('comptable.export') }}" method="POST" style="display: inline;">
+                @csrf
+                <input type="hidden" name="format" value="pdf">
+                <button type="submit" class="btn-custom py-2 px-3">
+                    <i class="fas fa-download"></i> PDF brut
+                </button>
+            </form>
+            
+            <form action="{{ route('comptable.export') }}" method="POST" style="display: inline;">
+                @csrf
+                <input type="hidden" name="format" value="excel">
+                <button type="submit" class="btn-custom btn-custom-success py-2 px-3">
+                    <i class="fas fa-file-excel"></i> Excel
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive-custom">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>Référence</th>
+                    <th>Agence Source</th>
+                    <th>Agence Destinataire</th>
+                    <th>Montant</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($compensations as $compensation)
+                <tr>
+                    <td><strong>{{ $compensation['reference'] }}</strong></td>
+                    <td>{{ $compensation['agence_source'] }}</td>
+                    <td>{{ $compensation['agence_dest'] }}</td>
+                    <td class="fw-bold text-white">{{ number_format($compensation['montant'], 0, ',', ' ') }} FCFA</td>
+                    <td>
+                        @if($compensation['statut'] === 'en_attente')
+                            <span class="badge-premium badge-premium-warning">En attente</span>
+                        @elseif($compensation['statut'] === 'paye' || $compensation['statut'] === 'payé')
+                            <span class="badge-premium badge-premium-success">Payée</span>
+                        @elseif($compensation['statut'] === 'valide' || $compensation['statut'] === 'validé')
+                            <span class="badge-premium badge-premium-info">Validée</span>
+                        @else
+                            <span class="badge-premium">{{ ucfirst($compensation['statut']) }}</span>
+                        @endif
+                    </td>
+                    <td>{{ $compensation['date'] }}</td>
+                    <td>
+                        <div class="d-flex gap-2">
+                            @if($compensation['statut'] == 'en_attente')
+                                <!-- Valider -->
+                                <form action="{{ route('comptable.valider', $compensation['id']) }}" method="POST" style="display: inline;">
+                                    @csrf
+                                    <button type="submit" class="btn-custom btn-custom-primary py-1.5 px-2.5" title="Valider la compensation">
+                                        <i class="fas fa-check m-0"></i>
+                                    </button>
+                                </form>
+                                <!-- Payer -->
+                                <form action="{{ route('comptable.payer', $compensation['id']) }}" method="POST" style="display: inline;">
+                                    @csrf
+                                    <button type="submit" class="btn-custom btn-custom-success py-1.5 px-2.5" title="Marquer comme payée">
+                                        <i class="fas fa-dollar-sign m-0"></i>
+                                    </button>
+                                </form>
+                            @else
+                                <span class="text-muted small fw-bold">Traitée</span>
+                            @endif
+                        </div>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-5">
+                        <i class="fas fa-scale-unbalanced d-block mb-3 fs-3 text-muted" style="opacity: 0.5;"></i>
+                        Aucune compensation à traiter pour le moment.
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+@endsection
