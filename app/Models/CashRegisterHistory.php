@@ -4,11 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
-
 class CashRegisterHistory extends Model
 {
-    use SoftDeletes;
 
     protected $fillable = [
         'cash_register_id',

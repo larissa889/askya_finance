@@ -14,7 +14,9 @@ class CashRegister extends Model
     protected $fillable = [
         'code',
         'name',
+        'type',
         'agency_id',
+        'bank_id',
         'assigned_to',
         'balance',
         'status',
@@ -34,6 +36,11 @@ class CashRegister extends Model
     public function agency(): BelongsTo
     {
         return $this->belongsTo(Agency::class);
+    }
+
+    public function bank(): BelongsTo
+    {
+        return $this->belongsTo(Bank::class);
     }
 
     public function assignedTo(): BelongsTo

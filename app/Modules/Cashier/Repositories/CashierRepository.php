@@ -21,13 +21,13 @@ class CashierRepository
             ->whereDate('created_at', $todayDate);
 
         $totalCollected = (clone $baseQuery)
-            ->where('transaction_type', 'receive')
-            ->where('status', 'completed')
+            ->whereIn('type', ['deposit', 'transfer'])
+            ->where('status', 'reconciled')
             ->sum('amount');
 
         $totalPaid = (clone $baseQuery)
-            ->where('transaction_type', 'send')
-            ->where('status', 'completed')
+            ->whereIn('type', ['withdraw', 'payment'])
+            ->where('status', 'reconciled')
             ->sum('amount');
 
         $transactionsCount = (clone $baseQuery)->count();
@@ -44,7 +44,7 @@ class CashierRepository
      */
     public function getRecentTransactions(User $cashier): Collection
     {
-        return Transaction::with(['cashier:id,name'])
+        return Transaction::with(['cashier'])
             ->where('agency_id', $cashier->agency_id)
             ->latest()
             ->limit(10)
@@ -56,7 +56,7 @@ class CashierRepository
      */
     public function getTransactions(User $cashier, array $filters = []): LengthAwarePaginator
     {
-        $query = Transaction::with(['cashier:id,name'])
+        $query = Transaction::with(['cashier'])
             ->where('agency_id', $cashier->agency_id)
             ->latest();
 
@@ -65,18 +65,18 @@ class CashierRepository
         }
 
         if (!empty($filters['transaction_type'])) {
-            $query->where('transaction_type', $filters['transaction_type']);
+            $query->where('type', $filters['transaction_type']);
         }
 
         if (!empty($filters['service_type'])) {
-            $query->where('service_type', $filters['service_type']);
+            $query->where('service_id', $filters['service_type']);
         }
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('client_name', 'like', "%{$search}%")
-                  ->orWhere('phone_number', 'like', "%{$search}%")
+                  ->orWhere('client_phone', 'like', "%{$search}%")
                   ->orWhere('reference', 'like', "%{$search}%");
             });
         }
@@ -97,7 +97,7 @@ class CashierRepository
      */
     public function findTransaction(int $id, User $cashier): ?Transaction
     {
-        return Transaction::with(['cashier:id,name', 'agency:id,name,code'])
+        return Transaction::with(['cashier', 'agency:id,name,code'])
             ->where('agency_id', $cashier->agency_id)
             ->find($id);
     }
@@ -118,9 +118,9 @@ class CashierRepository
         return Transaction::where('agency_id', $cashier->agency_id)
             ->where(function ($q) use ($query) {
                 $q->where('client_name', 'like', "%{$query}%")
-                  ->orWhere('phone_number', 'like', "%{$query}%");
+                  ->orWhere('client_phone', 'like', "%{$query}%");
             })
-            ->select('client_name', 'phone_number')
+            ->select('client_name', 'client_phone')
             ->distinct()
             ->limit(20)
             ->get();

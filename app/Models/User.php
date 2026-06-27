@@ -120,17 +120,17 @@ class User extends Authenticatable
 
     public function scopeCashiers($query)
     {
-        return $query->where('role', 'cashier');
+        return $query->where('role', 'caissier');
     }
 
     public function scopeSupervisors($query)
     {
-        return $query->where('role', 'supervisor');
+        return $query->where('role', 'superviseur');
     }
 
     public function scopeAccountants($query)
     {
-        return $query->where('role', 'accountant');
+        return $query->where('role', 'comptable');
     }
 
     public function scopeAdmins($query)

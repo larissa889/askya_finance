@@ -29,12 +29,14 @@ class CheckRole
 
         if (!in_array($userRole, $roles, true)) {
             // Rediriger vers le dashboard approprié selon le rôle de l'utilisateur
-            return redirect()->match($userRole, [
+            $route = match ($userRole) {
                 'admin' => route('admin.dashboard'),
                 'caissier' => route('caissier.dashboard'),
                 'superviseur' => route('superviseur.dashboard'),
                 'comptable' => route('comptable.dashboard'),
-            ], route('login'));
+                default => route('login'),
+            };
+            return redirect($route);
         }
 
         return $next($request);

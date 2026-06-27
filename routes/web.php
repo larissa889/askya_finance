@@ -64,6 +64,16 @@ Route::middleware(['auth'])->group(function () {
         
         // Routes pour la recherche
         Route::get('search', [SearchController::class, 'index'])->name('search.index');
+
+        // Routes Africards
+        Route::get('africards/create', [\App\Http\Controllers\Caissier\AfricardsController::class, 'create'])->name('africards.create');
+        Route::post('africards', [\App\Http\Controllers\Caissier\AfricardsController::class, 'storeAccount'])->name('africards.store');
+        Route::get('africards/operation/{type}', [\App\Http\Controllers\Caissier\AfricardsController::class, 'operationForm'])->name('africards.operation');
+        Route::post('africards/operation', [\App\Http\Controllers\Caissier\AfricardsController::class, 'storeOperation'])->name('africards.operation.store');
+
+        // Routes approvisionnements & reversements
+        Route::get('supplies/create/{type}', [\App\Http\Controllers\Caissier\SupplyRequestController::class, 'create'])->name('supplies.create');
+        Route::post('supplies', [\App\Http\Controllers\Caissier\SupplyRequestController::class, 'store'])->name('supplies.store');
     });
     
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])
@@ -90,6 +100,18 @@ Route::middleware(['auth'])->group(function () {
         // Routes pour le profil
         Route::get('profile', [SuperviseurController::class, 'profile'])->name('profile.index');
         Route::put('profile', [SuperviseurController::class, 'updateProfile'])->name('profile.update');
+
+        // Routes pour la gestion des caissiers
+        Route::get('cashiers', [SuperviseurController::class, 'cashiers'])->name('cashiers.index');
+        Route::get('cashiers/{id}/activity', [SuperviseurController::class, 'cashierActivity'])->name('cashiers.activity');
+
+        // Routes pour la validation des approvisionnements
+        Route::get('supplies', [SuperviseurController::class, 'supplies'])->name('supplies.index');
+        Route::post('supplies/{id}/valider', [SuperviseurController::class, 'validerSupply'])->name('supplies.valider');
+        Route::post('supplies/{id}/rejeter', [SuperviseurController::class, 'rejeterSupply'])->name('supplies.rejeter');
+
+        // Routes pour les opérations inter-agences
+        Route::get('inter-agencies', [SuperviseurController::class, 'interAgencies'])->name('inter-agencies.index');
     });
     
     Route::get('/comptable/dashboard', [ComptableController::class, 'dashboard'])
@@ -114,12 +136,26 @@ Route::middleware(['auth'])->group(function () {
         // Routes pour le profil
         Route::get('profile', [ComptableController::class, 'profile'])->name('profile.index');
         Route::put('profile', [ComptableController::class, 'updateProfile'])->name('profile.update');
+
+        // Routes pour les clôtures journalières (fiche d'arrêt)
+        Route::get('closures', [ComptableController::class, 'closures'])->name('closures.index');
+        Route::post('closures/{id}/valider', [ComptableController::class, 'validerClosure'])->name('closures.valider');
+
+        // Routes pour le rapprochement bancaire
+        Route::get('reconciliation', [\App\Http\Controllers\Comptable\ReconciliationController::class, 'index'])->name('reconciliation.index');
+        Route::post('reconciliation', [\App\Http\Controllers\Comptable\ReconciliationController::class, 'reconcile'])->name('reconciliation.store');
     });
 });
 
 // Routes admin pour la gestion des utilisateurs (nécessite authentification + rôle admin)
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('users', UserController::class);
+    Route::resource('agencies', \App\Http\Controllers\Admin\AgencyController::class);
+    Route::resource('services', \App\Http\Controllers\Admin\ServiceController::class);
+    Route::post('services/{service}/sync-agencies', [\App\Http\Controllers\Admin\ServiceController::class, 'syncAgencies'])->name('services.sync-agencies');
+    Route::resource('banks', \App\Http\Controllers\Admin\BankController::class);
+    Route::resource('registers', \App\Http\Controllers\Admin\CashRegisterController::class);
+    Route::post('registers/{register}/feed', [\App\Http\Controllers\Admin\CashRegisterController::class, 'feed'])->name('registers.feed');
     
     // Routes pour les transactions
     Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');

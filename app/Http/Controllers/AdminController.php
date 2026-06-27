@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Models\Transaction;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
@@ -11,95 +15,75 @@ class AdminController extends Controller
      */
     public function dashboard()
     {
-        // Données statiques pour le prototype
         $admin = [
-            'nom' => 'Administrateur',
-            'email' => 'admin@askya-finance.com',
-            'photo' => 'https://ui-avatars.com/api/?name=Admin&background=0F172A&color=fff&size=128'
+            'nom' => Auth::user()->name,
+            'email' => Auth::user()->email,
+            'photo' => 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=0F172A&color=fff&size=128'
         ];
+
+        $today = now()->toDateString();
 
         $statistiques = [
-            'total_utilisateurs' => 156,
-            'caissiers_actifs' => 42,
-            'transactions_jour' => 1247,
-            'volume_financier' => 45800000
+            'total_utilisateurs' => User::count(),
+            'caissiers_actifs' => User::where('role', 'caissier')->where('is_active', true)->count(),
+            'transactions_jour' => Transaction::whereDate('created_at', $today)->count(),
+            'volume_financier' => Transaction::whereDate('created_at', $today)->sum('amount')
         ];
 
-        $utilisateurs = [
-            [
-                'id' => 1,
-                'nom' => 'Jean Dupont',
-                'role' => 'caissier',
-                'email' => 'jean.dupont@askya-finance.com',
-                'statut' => 'actif',
-                'date_creation' => '15/06/2024'
-            ],
-            [
-                'id' => 2,
-                'nom' => 'Marie Kouassi',
-                'role' => 'superviseur',
-                'email' => 'marie.kouassi@askya-finance.com',
-                'statut' => 'actif',
-                'date_creation' => '10/06/2024'
-            ],
-            [
-                'id' => 3,
-                'nom' => 'Paul Yao',
-                'role' => 'comptable',
-                'email' => 'paul.yao@askya-finance.com',
-                'statut' => 'actif',
-                'date_creation' => '08/06/2024'
-            ],
-            [
-                'id' => 4,
-                'nom' => 'Awa Diop',
-                'role' => 'caissier',
-                'email' => 'awa.diop@askya-finance.com',
-                'statut' => 'inactif',
-                'date_creation' => '05/06/2024'
-            ],
-            [
-                'id' => 5,
-                'nom' => 'Kofi Mensah',
-                'role' => 'caissier',
-                'email' => 'kofi.mensah@askya-finance.com',
-                'statut' => 'actif',
-                'date_creation' => '01/06/2024'
-            ]
-        ];
+        $utilisateursRaw = User::orderBy('created_at', 'desc')->limit(5)->get();
+        $utilisateurs = $utilisateursRaw->map(function ($u) {
+            $roleValue = $u->role instanceof \BackedEnum ? $u->role->value : $u->role;
+            return [
+                'id' => $u->id,
+                'nom' => $u->name,
+                'role' => $roleValue,
+                'email' => $u->email,
+                'statut' => $u->is_active ? 'actif' : 'inactif',
+                'date_creation' => $u->created_at->format('d/m/Y')
+            ];
+        });
 
-        $activites = [
-            [
-                'type' => 'connexion',
-                'message' => 'Jean Dupont s\'est connecté',
-                'heure' => 'Il y a 5 min',
-                'icone' => 'fa-sign-in-alt'
-            ],
-            [
-                'type' => 'creation',
-                'message' => 'Nouveau compte créé : Awa Diop',
-                'heure' => 'Il y a 15 min',
-                'icone' => 'fa-user-plus'
-            ],
-            [
-                'type' => 'transaction',
-                'message' => 'Transaction TRX-2024-1247 validée',
-                'heure' => 'Il y a 30 min',
-                'icone' => 'fa-check-circle'
-            ],
-            [
-                'type' => 'admin',
-                'message' => 'Paramètres système mis à jour',
-                'heure' => 'Il y a 1 heure',
-                'icone' => 'fa-cog'
-            ],
-            [
-                'type' => 'connexion',
-                'message' => 'Marie Kouassi s\'est connectée',
-                'heure' => 'Il y a 2 heures',
-                'icone' => 'fa-sign-in-alt'
-            ]
-        ];
+        // Récupérer les logs récents ou régresser sur des actions fictives s'il n'y en a pas
+        $logs = AuditLog::with('user')->orderBy('created_at', 'desc')->limit(5)->get();
+        
+        $activites = [];
+        if ($logs->count() > 0) {
+            foreach ($logs as $log) {
+                $activites[] = [
+                    'type' => $log->event,
+                    'message' => $log->description,
+                    'heure' => $log->created_at->diffForHumans(),
+                    'icone' => match ($log->event) {
+                        'login', 'connexion' => 'fa-sign-in-alt',
+                        'create', 'creation' => 'fa-user-plus',
+                        'update', 'modification' => 'fa-cog',
+                        'delete', 'suppression' => 'fa-trash',
+                        default => 'fa-info-circle'
+                    }
+                ];
+            }
+        } else {
+            // Remplir avec des données basées sur les transactions réelles si aucun log
+            $recentTransactions = Transaction::with('createdBy')->orderBy('created_at', 'desc')->limit(5)->get();
+            foreach ($recentTransactions as $tx) {
+                $activites[] = [
+                    'type' => 'transaction',
+                    'message' => "Transaction " . $tx->reference . " créée par " . $tx->createdBy->name,
+                    'heure' => $tx->created_at->diffForHumans(),
+                    'icone' => 'fa-check-circle'
+                ];
+            }
+            if (empty($activites)) {
+                $activites = [
+                    [
+                        'type' => 'systeme',
+                        'message' => 'Système Askya Finance initialisé',
+                        'heure' => 'À l\'instant',
+                        'icone' => 'fa-cog'
+                    ]
+                ];
+            }
+        }
 
         return view('admin.dashboard', compact(
             'admin',

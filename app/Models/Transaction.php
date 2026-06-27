@@ -41,6 +41,36 @@ class Transaction extends Model
         'reconciled_at' => 'datetime',
     ];
 
+    public function getAskyaCommissionAttribute(): float
+    {
+        return (float) $this->fees * 0.60;
+    }
+
+    public function getBankCommissionAttribute(): float
+    {
+        return (float) $this->fees * 0.40;
+    }
+
+    public function getNetAmountAttribute(): float
+    {
+        return (float) $this->amount;
+    }
+
+    public function getPhoneNumberAttribute(): ?string
+    {
+        return $this->client_phone;
+    }
+
+    public function getServiceTypeAttribute(): ?string
+    {
+        return $this->service ? $this->service->name : null;
+    }
+
+    public function getTransactionTypeAttribute(): string
+    {
+        return $this->type;
+    }
+
     /**
      * Boot: auto-generate unique reference on creation.
      */
@@ -81,6 +111,11 @@ class Transaction extends Model
     }
 
     public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function cashier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }

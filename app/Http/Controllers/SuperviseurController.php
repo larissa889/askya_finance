@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use App\Models\User;
+use App\Models\CashRegister;
+use App\Models\SupplyRequest;
+use App\Models\Agency;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,16 +17,22 @@ class SuperviseurController extends Controller
      */
     public function dashboard()
     {
+        $user = Auth::user();
+        if (!$user->agency_id) {
+            abort(403, 'Vous n\'êtes pas assigné à une agence.');
+        }
+
         $today = now()->startOfDay();
         
         $statistiques = [
-            'total_jour' => Transaction::whereDate('created_at', '>=', $today)->count(),
-            'en_attente' => Transaction::where('status', 'recorded')->count(),
-            'validées' => Transaction::where('status', 'reconciled')->count(),
-            'rejetées' => Transaction::where('status', 'discrepancy')->count()
+            'total_jour' => Transaction::where('agency_id', $user->agency_id)->whereDate('created_at', '>=', $today)->count(),
+            'en_attente' => Transaction::where('agency_id', $user->agency_id)->where('status', 'recorded')->count(),
+            'validées' => Transaction::where('agency_id', $user->agency_id)->where('status', 'reconciled')->count(),
+            'rejetées' => Transaction::where('agency_id', $user->agency_id)->where('status', 'discrepancy')->count()
         ];
 
-        $transactions_en_attente = Transaction::where('status', 'recorded')
+        $transactions_en_attente = Transaction::where('agency_id', $user->agency_id)
+            ->where('status', 'recorded')
             ->with(['createdBy', 'service'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -50,7 +60,8 @@ class SuperviseurController extends Controller
      */
     public function validerTransaction(Request $request, $id)
     {
-        $transaction = Transaction::findOrFail($id);
+        $user = Auth::user();
+        $transaction = Transaction::where('agency_id', $user->agency_id)->findOrFail($id);
         
         $transaction->update([
             'status' => 'reconciled',
@@ -67,11 +78,12 @@ class SuperviseurController extends Controller
      */
     public function rejeterTransaction(Request $request, $id)
     {
+        $user = Auth::user();
         $request->validate([
             'commentaire' => ['required', 'string', 'max:500']
         ]);
 
-        $transaction = Transaction::findOrFail($id);
+        $transaction = Transaction::where('agency_id', $user->agency_id)->findOrFail($id);
         
         $transaction->update([
             'status' => 'discrepancy',
@@ -89,7 +101,10 @@ class SuperviseurController extends Controller
      */
     public function showTransaction($id)
     {
-        $t = Transaction::with(['createdBy', 'service', 'operationType'])->findOrFail($id);
+        $user = Auth::user();
+        $t = Transaction::where('agency_id', $user->agency_id)
+            ->with(['createdBy', 'service', 'operationType'])
+            ->findOrFail($id);
         
         $statutView = 'en_attente';
         if ($t->status === 'reconciled') {
@@ -120,12 +135,13 @@ class SuperviseurController extends Controller
      */
     public function transactions(Request $request)
     {
+        $user = Auth::user();
         $search = $request->input('search');
         $statut = $request->input('statut');
         $date_debut = $request->input('date_debut');
         $date_fin = $request->input('date_fin');
 
-        $query = Transaction::with(['createdBy', 'service']);
+        $query = Transaction::where('agency_id', $user->agency_id)->with(['createdBy', 'service']);
 
         if ($search) {
             $query->where(function($q) use ($search) {
@@ -191,7 +207,9 @@ class SuperviseurController extends Controller
      */
     public function validation(Request $request)
     {
-        $transactions_en_attente = Transaction::where('status', 'recorded')
+        $user = Auth::user();
+        $transactions_en_attente = Transaction::where('agency_id', $user->agency_id)
+            ->where('status', 'recorded')
             ->with(['createdBy', 'service'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -215,17 +233,171 @@ class SuperviseurController extends Controller
     }
 
     /**
-     * Affiche les rapports
+     * Affiche la liste des caissiers de l'agence
+     */
+    public function cashiers()
+    {
+        $user = Auth::user();
+        $cashiers = User::where('agency_id', $user->agency_id)
+            ->where('role', 'caissier')
+            ->with(['cashRegisters'])
+            ->get();
+            
+        return view('superviseur.cashiers.index', compact('cashiers'));
+    }
+
+    /**
+     * Affiche l'activité d'un caissier spécifique
+     */
+    public function cashierActivity($id)
+    {
+        $user = Auth::user();
+        $cashier = User::where('agency_id', $user->agency_id)
+            ->where('role', 'caissier')
+            ->findOrFail($id);
+
+        $transactions = Transaction::where('created_by', $cashier->id)
+            ->orderBy('created_at', 'desc')
+            ->limit(30)
+            ->get();
+
+        return view('superviseur.cashiers.activity', compact('cashier', 'transactions'));
+    }
+
+    /**
+     * Affiche les demandes d'approvisionnement en attente pour l'agence
+     */
+    public function supplies()
+    {
+        $user = Auth::user();
+        
+        // Pendings where destination agency is the supervisor's agency
+        $pendingSupplies = SupplyRequest::where('agency_destination_id', $user->agency_id)
+            ->where('status', 'pending')
+            ->with(['createdBy', 'serviceSource', 'serviceDestination', 'cashRegisterSource', 'cashRegisterDestination'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('superviseur.supplies.index', compact('pendingSupplies'));
+    }
+
+    /**
+     * Valide une demande d'approvisionnement
+     */
+    public function validerSupply(Request $request, $id)
+    {
+        $user = Auth::user();
+        $supply = SupplyRequest::where('agency_destination_id', $user->agency_id)
+            ->where('status', 'pending')
+            ->findOrFail($id);
+
+        // Perform balance adjustment
+        $destReg = $supply->cashRegisterDestination;
+        $srcReg = $supply->cashRegisterSource;
+
+        if ($supply->type === 'agency') {
+            // Inter-agency: debit source register, credit destination register
+            if ($srcReg) {
+                if ($srcReg->balance < $supply->amount) {
+                    return redirect()->back()->with('error', 'Le solde de l\'agence source est insuffisant pour valider cet approvisionnement.');
+                }
+                $srcReg->balance -= $supply->amount;
+                $srcReg->save();
+            }
+            if ($destReg) {
+                $destReg->balance += $supply->amount;
+                $destReg->save();
+            }
+        } elseif ($supply->type === 'central' && $srcReg && $destReg) {
+            // Reversement: debit cashier (source), credit main (dest)
+            if ($srcReg->balance < $supply->amount) {
+                return redirect()->back()->with('error', 'Le solde du caissier est insuffisant pour valider ce reversement.');
+            }
+            $srcReg->balance -= $supply->amount;
+            $srcReg->save();
+            
+            $destReg->balance += $supply->amount;
+            $destReg->save();
+        } else {
+            // Client supply or simple product supply: credit cashier
+            if ($destReg) {
+                $destReg->balance += $supply->amount;
+                $destReg->save();
+            }
+        }
+
+        $supply->update([
+            'status' => 'approved',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+        ]);
+
+        return redirect()->route('superviseur.supplies.index')
+            ->with('success', 'Demande d\'approvisionnement validée.');
+    }
+
+    /**
+     * Rejette une demande d'approvisionnement
+     */
+    public function rejeterSupply(Request $request, $id)
+    {
+        $user = Auth::user();
+        $request->validate([
+            'rejection_reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        $supply = SupplyRequest::where('agency_destination_id', $user->agency_id)
+            ->where('status', 'pending')
+            ->findOrFail($id);
+
+        $supply->update([
+            'status' => 'rejected',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'rejection_reason' => $request->rejection_reason,
+        ]);
+
+        return redirect()->route('superviseur.supplies.index')
+            ->with('success', 'Demande d\'approvisionnement rejetée.');
+    }
+
+    /**
+     * Affiche les dettes et opérations inter-agences
+     */
+    public function interAgencies()
+    {
+        $user = Auth::user();
+        
+        // Debts from other agencies to us: where we are agency_source
+        $debtsToUs = SupplyRequest::where('agency_source_id', $user->agency_id)
+            ->where('type', 'agency')
+            ->where('status', 'approved')
+            ->with(['agencyDestination', 'createdBy'])
+            ->get();
+            
+        // Debts we owe to other agencies: where we are agency_destination
+        $debtsWeOwe = SupplyRequest::where('agency_destination_id', $user->agency_id)
+            ->where('type', 'agency')
+            ->where('status', 'approved')
+            ->with(['agencySource', 'createdBy'])
+            ->get();
+
+        return view('superviseur.inter_agencies.index', compact('debtsToUs', 'debtsWeOwe'));
+    }
+
+    /**
+     * Affiche les rapports de l'agence
      */
     public function reports()
     {
+        $user = Auth::user();
         $today = now()->startOfDay();
         
         $statistiques = [
-            'total_jour' => Transaction::whereDate('created_at', '>=', $today)->count(),
-            'validations' => Transaction::where('status', 'reconciled')->whereDate('reconciled_at', '>=', $today)->count(),
-            'rejets' => Transaction::where('status', 'discrepancy')->whereDate('reconciled_at', '>=', $today)->count(),
-            'montant_total' => Transaction::where('status', 'reconciled')->whereDate('reconciled_at', '>=', $today)->sum('amount')
+            'total_jour' => Transaction::where('agency_id', $user->agency_id)->whereDate('created_at', '>=', $today)->count(),
+            'validations' => Transaction::where('agency_id', $user->agency_id)->where('status', 'reconciled')->whereDate('reconciled_at', '>=', $today)->count(),
+            'rejets' => Transaction::where('agency_id', $user->agency_id)->where('status', 'discrepancy')->whereDate('reconciled_at', '>=', $today)->count(),
+            'montant_total' => Transaction::where('agency_id', $user->agency_id)->where('status', 'reconciled')->whereDate('reconciled_at', '>=', $today)->sum('amount')
         ];
 
         // Regrouper par jour sur les 7 derniers jours
@@ -235,7 +407,7 @@ class SuperviseurController extends Controller
             $date = now()->subDays($i);
             $days->push($date->translatedFormat('l'));
             
-            $count = Transaction::whereDate('created_at', $date->toDateString())->count();
+            $count = Transaction::where('agency_id', $user->agency_id)->whereDate('created_at', $date->toDateString())->count();
             $data->push($count);
         }
 
@@ -247,9 +419,9 @@ class SuperviseurController extends Controller
         $transactions_par_statut = [
             'labels' => ['Validées', 'En attente', 'Rejetées'],
             'data' => [
-                Transaction::where('status', 'reconciled')->count(),
-                Transaction::where('status', 'recorded')->count(),
-                Transaction::where('status', 'discrepancy')->count()
+                Transaction::where('agency_id', $user->agency_id)->where('status', 'reconciled')->count(),
+                Transaction::where('agency_id', $user->agency_id)->where('status', 'recorded')->count(),
+                Transaction::where('agency_id', $user->agency_id)->where('status', 'discrepancy')->count()
             ]
         ];
 
@@ -266,7 +438,6 @@ class SuperviseurController extends Controller
     public function profile()
     {
         $user = Auth::user();
-
         return view('superviseur.profile.index', compact('user'));
     }
 
@@ -292,7 +463,7 @@ class SuperviseurController extends Controller
 
         $user->save();
 
-        return redirect()->route('superviseur.profile')
+        return redirect()->route('superviseur.profile.index')
             ->with('success', 'Profil mis à jour avec succès.');
     }
 }

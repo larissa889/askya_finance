@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -656,6 +660,57 @@
                 padding: 30px 20px;
             }
         }
+
+        /* Theme Light overrides */
+        [data-theme="light"] {
+            --bg-dark: #f8fafc;
+            --bg-darker: #f1f5f9;
+            --card-glass: rgba(255, 255, 255, 0.7);
+            --border-glass: rgba(0, 0, 0, 0.08);
+            --text-light: #0f172a;
+            --text-muted: #64748b;
+        }
+        [data-theme="light"] .sidebar {
+            background: rgba(241, 245, 249, 0.8);
+        }
+        [data-theme="light"] .header {
+            background: rgba(248, 250, 252, 0.8);
+        }
+        [data-theme="light"] .table-custom td {
+            color: #334155;
+        }
+        [data-theme="light"] .table-custom th {
+            background: rgba(226, 232, 240, 0.6);
+            color: #1e293b;
+        }
+        [data-theme="light"] .page-title h1 {
+            background: linear-gradient(to right, #0f172a, #334155);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        [data-theme="light"] .header-brand span {
+            background: linear-gradient(to right, #0f172a, #334155);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        [data-theme="light"] .stat-card-premium h3 {
+            color: #0f172a;
+        }
+        [data-theme="light"] .modal-content-custom {
+            background: #ffffff;
+        }
+        [data-theme="light"] .sidebar-menu a.active {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+            border-color: rgba(59, 130, 246, 0.15);
+            color: #1d4ed8;
+        }
+        [data-theme="light"] .sidebar-menu a {
+            color: #475569;
+        }
+        [data-theme="light"] .sidebar-menu a:hover {
+            background: rgba(0, 0, 0, 0.03);
+            color: #0f172a;
+        }
     </style>
     @yield('styles')
 </head>
@@ -676,6 +731,9 @@
         </div>
         
         <div class="header-actions">
+            <button id="themeToggle" class="btn-custom" title="Changer de thème" style="border-radius: 50%; width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                <i class="fas fa-sun" id="themeIcon"></i>
+            </button>
             @auth
             <div class="header-user">
                 <div class="header-user-info d-none d-md-block">
@@ -713,9 +771,26 @@
                 @if(Auth::user()->role && Auth::user()->role->value === 'caissier')
                     <li>
                         <a href="{{ route('caissier.dashboard') }}" class="{{ Route::is('caissier.dashboard') ? 'active' : '' }}">
-                            <i class="fas fa-grid-2"></i>
                             <i class="fas fa-house"></i>
                             <span>Tableau de bord</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('caissier.africards.create') }}" class="{{ Route::is('caissier.africards.create') ? 'active' : '' }}">
+                            <i class="fas fa-credit-card"></i>
+                            <span>Créer Compte Africards</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('caissier.africards.operation', 'deposit') }}" class="{{ Route::is('caissier.africards.operation') && request()->route('type') === 'deposit' ? 'active' : '' }}">
+                            <i class="fas fa-arrow-down-to-bracket"></i>
+                            <span>Dépôt Africards</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('caissier.africards.operation', 'withdraw') }}" class="{{ Route::is('caissier.africards.operation') && request()->route('type') === 'withdraw' ? 'active' : '' }}">
+                            <i class="fas fa-arrow-up-from-bracket"></i>
+                            <span>Retrait Africards</span>
                         </a>
                     </li>
                     <li>
@@ -755,7 +830,25 @@
                     <li>
                         <a href="{{ route('superviseur.validation.index') }}" class="{{ Route::is('superviseur.validation.*') ? 'active' : '' }}">
                             <i class="fas fa-circle-check"></i>
-                            <span>Validations</span>
+                            <span>Validations Transaction</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('superviseur.supplies.index') }}" class="{{ Route::is('superviseur.supplies.*') ? 'active' : '' }}">
+                            <i class="fas fa-truck-ramp-box"></i>
+                            <span>Validation Approvisionnements</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('superviseur.cashiers.index') }}" class="{{ Route::is('superviseur.cashiers.*') ? 'active' : '' }}">
+                            <i class="fas fa-user-tie"></i>
+                            <span>Mes Caissiers</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('superviseur.inter-agencies.index') }}" class="{{ Route::is('superviseur.inter-agencies.*') ? 'active' : '' }}">
+                            <i class="fas fa-handshake"></i>
+                            <span>Suivi Inter-Agences</span>
                         </a>
                     </li>
                     <li>
@@ -787,6 +880,18 @@
                         </a>
                     </li>
                     <li>
+                        <a href="{{ route('comptable.closures.index') }}" class="{{ Route::is('comptable.closures.*') ? 'active' : '' }}">
+                            <i class="fas fa-file-signature"></i>
+                            <span>Clôtures Journalières</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('comptable.reconciliation.index') }}" class="{{ Route::is('comptable.reconciliation.*') ? 'active' : '' }}">
+                            <i class="fas fa-file-contract"></i>
+                            <span>Rapprochement Bancaire</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="{{ route('comptable.solde.index') }}" class="{{ Route::is('comptable.solde.*') ? 'active' : '' }}">
                             <i class="fas fa-wallet"></i>
                             <span>Soldes agences</span>
@@ -812,6 +917,30 @@
                         <a href="{{ route('admin.users.index') }}" class="{{ Route::is('admin.users.*') ? 'active' : '' }}">
                             <i class="fas fa-users-gear"></i>
                             <span>Utilisateurs</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.agencies.index') }}" class="{{ Route::is('admin.agencies.*') ? 'active' : '' }}">
+                            <i class="fas fa-building"></i>
+                            <span>Agences</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.services.index') }}" class="{{ Route::is('admin.services.*') ? 'active' : '' }}">
+                            <i class="fas fa-wallet"></i>
+                            <span>Produits</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.banks.index') }}" class="{{ Route::is('admin.banks.*') ? 'active' : '' }}">
+                            <i class="fas fa-university"></i>
+                            <span>Banques</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.registers.index') }}" class="{{ Route::is('admin.registers.*') ? 'active' : '' }}">
+                            <i class="fas fa-cash-register"></i>
+                            <span>Caisses</span>
                         </a>
                     </li>
                     <li>
@@ -878,6 +1007,7 @@
     <!-- Navigation toggler script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Menu Toggle
             const menuToggleBtn = document.getElementById('menuToggleBtn');
             const sidebar = document.getElementById('sidebar');
             const sidebarOverlay = document.getElementById('sidebarOverlay');
@@ -890,6 +1020,36 @@
             if (menuToggleBtn && sidebar && sidebarOverlay) {
                 menuToggleBtn.addEventListener('click', toggleSidebar);
                 sidebarOverlay.addEventListener('click', toggleSidebar);
+            }
+
+            // Theme Toggle
+            const themeToggleBtn = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const htmlElement = document.documentElement;
+
+            // Load theme from localStorage
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            updateThemeIcon(savedTheme);
+
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', function() {
+                    const currentTheme = htmlElement.getAttribute('data-theme');
+                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    
+                    htmlElement.setAttribute('data-theme', newTheme);
+                    localStorage.setItem('theme', newTheme);
+                    updateThemeIcon(newTheme);
+                });
+            }
+
+            function updateThemeIcon(theme) {
+                if (themeIcon) {
+                    if (theme === 'dark') {
+                        themeIcon.className = 'fas fa-sun';
+                    } else {
+                        themeIcon.className = 'fas fa-moon';
+                    }
+                }
             }
         });
     </script>

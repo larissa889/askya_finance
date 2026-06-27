@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use App\Models\Agency;
+use App\Models\CompensationReport;
+use App\Models\CashRegisterHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,13 +17,13 @@ class ComptableController extends Controller
     public function dashboard()
     {
         $statistiques = [
-            'a_regler' => \App\Models\CompensationReport::where('status', 'submitted')->sum('internal_balance'),
-            'compenses' => \App\Models\CompensationReport::where('status', 'approved')->sum('internal_balance'),
-            'solde_global' => \App\Models\Agency::sum('cash_balance') + \App\Models\Agency::sum('electronic_balance'),
+            'a_regler' => CompensationReport::where('status', 'submitted')->sum('internal_balance'),
+            'compenses' => CompensationReport::where('status', 'approved')->sum('internal_balance'),
+            'solde_global' => Agency::sum('cash_balance') + Agency::sum('electronic_balance'),
             'operations' => Transaction::count()
         ];
 
-        $compensationsRaw = \App\Models\CompensationReport::with(['agency'])
+        $compensationsRaw = CompensationReport::with(['agency'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
@@ -57,7 +60,7 @@ class ComptableController extends Controller
      */
     public function validerCompensation(Request $request, $id)
     {
-        $report = \App\Models\CompensationReport::findOrFail($id);
+        $report = CompensationReport::findOrFail($id);
         $report->update([
             'status' => 'approved',
             'approved_by' => Auth::id(),
@@ -74,7 +77,7 @@ class ComptableController extends Controller
      */
     public function marquerPaye(Request $request, $id)
     {
-        $report = \App\Models\CompensationReport::findOrFail($id);
+        $report = CompensationReport::findOrFail($id);
         $report->update([
             'status' => 'approved',
             'approved_by' => Auth::id(),
@@ -87,26 +90,6 @@ class ComptableController extends Controller
     }
 
     /**
-     * Génère un rapport financier
-     */
-    public function genererRapport(Request $request)
-    {
-        return redirect()->route('comptable.dashboard')
-            ->with('success', 'Rapport financier généré avec succès.');
-    }
-
-    /**
-     * Exporte les données
-     */
-    public function export(Request $request)
-    {
-        $format = $request->input('format', 'pdf');
-        
-        return redirect()->route('comptable.dashboard')
-            ->with('success', 'Export ' . strtoupper($format) . ' généré avec succès.');
-    }
-
-    /**
      * Affiche toutes les compensations
      */
     public function compensations(Request $request)
@@ -116,7 +99,7 @@ class ComptableController extends Controller
         $date_debut = $request->input('date_debut');
         $date_fin = $request->input('date_fin');
 
-        $query = \App\Models\CompensationReport::with(['agency']);
+        $query = CompensationReport::with(['agency']);
 
         if ($search) {
             $query->where(function($q) use ($search) {
@@ -183,7 +166,7 @@ class ComptableController extends Controller
      */
     public function showCompensation($id)
     {
-        $r = \App\Models\CompensationReport::with(['agency'])->findOrFail($id);
+        $r = CompensationReport::with(['agency'])->findOrFail($id);
         
         $statutView = 'en_attente';
         if ($r->status === 'approved') {
@@ -209,6 +192,30 @@ class ComptableController extends Controller
     }
 
     /**
+     * Affiche les clôtures journalières à valider
+     */
+    public function closures()
+    {
+        $histories = CashRegisterHistory::with(['cashRegister', 'agency', 'createdBy'])
+            ->orderBy('date', 'desc')
+            ->get();
+        return view('comptable.closures.index', compact('histories'));
+    }
+
+    /**
+     * Valide une clôture journalière
+     */
+    public function validerClosure(Request $request, $id)
+    {
+        $history = CashRegisterHistory::findOrFail($id);
+        $history->notes = ($history->notes ? $history->notes . "\n" : "") . "Validé par le comptable le " . now()->format('d/m/Y H:i') . ".";
+        $history->save();
+
+        return redirect()->route('comptable.closures.index')
+            ->with('success', 'Clôture journalière validée avec succès.');
+    }
+
+    /**
      * Affiche le solde
      */
     public function solde(Request $request)
@@ -218,10 +225,10 @@ class ComptableController extends Controller
         $date_fin = $request->input('date_fin');
 
         $solde_info = [
-            'solde_actuel' => \App\Models\Agency::sum('cash_balance') + \App\Models\Agency::sum('electronic_balance'),
+            'solde_actuel' => Agency::sum('cash_balance') + Agency::sum('electronic_balance'),
             'total_credits' => Transaction::whereIn('type', ['deposit', 'transfer'])->sum('amount'),
             'total_debits' => Transaction::whereIn('type', ['withdraw', 'payment'])->sum('amount'),
-            'solde_disponible' => \App\Models\Agency::sum('cash_balance') + \App\Models\Agency::sum('electronic_balance'),
+            'solde_disponible' => Agency::sum('cash_balance') + Agency::sum('electronic_balance'),
             'derniere_maj' => now()->format('d/m/Y H:i')
         ];
 
@@ -270,10 +277,10 @@ class ComptableController extends Controller
     public function financialReports()
     {
         $statistiques = [
-            'total_compensations' => \App\Models\CompensationReport::count(),
+            'total_compensations' => CompensationReport::count(),
             'total_credits' => Transaction::whereIn('type', ['deposit', 'transfer'])->sum('amount'),
             'total_debits' => Transaction::whereIn('type', ['withdraw', 'payment'])->sum('amount'),
-            'solde_global' => \App\Models\Agency::sum('cash_balance') + \App\Models\Agency::sum('electronic_balance')
+            'solde_global' => Agency::sum('cash_balance') + Agency::sum('electronic_balance')
         ];
 
         $days = collect();
@@ -282,7 +289,7 @@ class ComptableController extends Controller
             $date = now()->subDays($i);
             $days->push($date->translatedFormat('l'));
             
-            $bal = \App\Models\Agency::sum('cash_balance') + \App\Models\Agency::sum('electronic_balance');
+            $bal = Agency::sum('cash_balance') + Agency::sum('electronic_balance');
             $data->push($bal);
         }
 
@@ -294,12 +301,12 @@ class ComptableController extends Controller
         $compensations_periode = [
             'labels' => ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
             'data' => [
-                \App\Models\CompensationReport::whereMonth('created_at', 1)->count(),
-                \App\Models\CompensationReport::whereMonth('created_at', 2)->count(),
-                \App\Models\CompensationReport::whereMonth('created_at', 3)->count(),
-                \App\Models\CompensationReport::whereMonth('created_at', 4)->count(),
-                \App\Models\CompensationReport::whereMonth('created_at', 5)->count(),
-                \App\Models\CompensationReport::whereMonth('created_at', 6)->count(),
+                CompensationReport::whereMonth('created_at', 1)->count(),
+                CompensationReport::whereMonth('created_at', 2)->count(),
+                CompensationReport::whereMonth('created_at', 3)->count(),
+                CompensationReport::whereMonth('created_at', 4)->count(),
+                CompensationReport::whereMonth('created_at', 5)->count(),
+                CompensationReport::whereMonth('created_at', 6)->count(),
             ]
         ];
 
@@ -322,7 +329,6 @@ class ComptableController extends Controller
     public function profile()
     {
         $user = Auth::user();
-
         return view('comptable.profile.index', compact('user'));
     }
 
